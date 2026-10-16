@@ -57,6 +57,8 @@ npm run liturgy:smoke -- America/Sao_Paulo                    # live API check (
 
 ## 4. Deploy
 
+**Heroku:** see [`docs/deploy-heroku.md`](docs/deploy-heroku.md) (worker dyno + Postgres and Redis add-ons; the `Procfile` runs migrations on release).
+
 **Google Cloud:** see [`docs/deploy-google-cloud.md`](docs/deploy-google-cloud.md). It recommends one
 Compute Engine VM running `docker compose`. App Engine and default Cloud Run settings scale to zero,
 which breaks the permanent Discord connection.

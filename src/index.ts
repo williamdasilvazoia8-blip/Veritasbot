@@ -1,6 +1,7 @@
 import { Client, Events, GatewayIntentBits, Partials, Status } from 'discord.js';
 import { Redis } from 'ioredis';
 import { loadEnv } from './config/env.js';
+import { redisOptions } from './shared/redis-options.js';
 import { logger } from './shared/logger.js';
 import { createPrisma } from './database/prisma.js';
 import { AuditService } from './modules/audit/audit-service.js';
@@ -36,8 +37,7 @@ async function main() {
   const prisma = createPrisma();
   await prisma.$connect();
 
-  const redisOptions = { maxRetriesPerRequest: null } as const;
-  const connection = new Redis(env.REDIS_URL, redisOptions);
+  const connection = new Redis(env.REDIS_URL, redisOptions(env.REDIS_URL));
   const jobs = new BullMqJobScheduler(connection);
 
   const client = new Client({
