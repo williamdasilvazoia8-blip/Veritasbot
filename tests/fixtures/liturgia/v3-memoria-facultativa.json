@@ -1,0 +1,70 @@
+{
+  "data": "03/01/2024",
+  "celebracoes": [
+    {
+      "id": "santissimo-nome-de-jesus-memoria-facultativa",
+      "liturgia": "Santíssimo Nome de Jesus. Memória Facultativa",
+      "cor": "Branco",
+      "principal": false,
+      "oracoes": { "coleta": "[omitida]", "oferendas": "[omitida]", "comunhao": "[omitida]", "extras": [] },
+      "antifonas": { "entrada": "[omitida]", "comunhao": "[omitida]" },
+      "leituras": [
+        {
+          "ordem": 1,
+          "tipo": "leitura",
+          "rotulo": "Primeira Leitura",
+          "opcoes": [
+            {
+              "referencia": "1Jo 2, 29–3, 6",
+              "titulo": "Leitura da Primeira Carta de São João",
+              "texto": "[omitido]"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "4-feira-do-tempo-do-natal-antes-da-epifania",
+      "liturgia": "4ª feira do Tempo do Natal antes da Epifania",
+      "cor": "Branco",
+      "principal": true,
+      "oracoes": { "coleta": "[omitida]", "oferendas": "[omitida]", "comunhao": "[omitida]", "extras": [] },
+      "antifonas": { "entrada": "[omitida]", "comunhao": "[omitida]" },
+      "leituras": [
+        {
+          "ordem": 3,
+          "tipo": "evangelho",
+          "rotulo": "Evangelho",
+          "opcoes": [
+            {
+              "referencia": "Jo 1, 29-34",
+              "titulo": "Proclamação do Evangelho de Jesus Cristo ✠ segundo João",
+              "texto": "[evangelho omitido]"
+            }
+          ]
+        },
+        {
+          "ordem": 1,
+          "tipo": "leitura",
+          "rotulo": "Primeira Leitura",
+          "opcoes": [
+            {
+              "referencia": "1Jo 2, 29–3, 6",
+              "titulo": "Leitura da Primeira Carta de São João",
+              "texto": "[omitido]"
+            }
+          ]
+        },
+        {
+          "ordem": 2,
+          "tipo": "salmo",
+          "rotulo": "Salmo Responsorial",
+          "opcoes": [
+            { "referencia": "Sl 97", "refrao": "[refrão A]", "texto": "[salmo A]" },
+            { "referencia": "Sl 97", "refrao": "[refrão B]", "texto": "[salmo B]" }
+          ]
+        }
+      ]
+    }
+  ]
+}

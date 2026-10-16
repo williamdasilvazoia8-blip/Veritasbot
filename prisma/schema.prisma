@@ -1,0 +1,218 @@
+// Esquema de dados do VeritasBot.
+// Regra: toda tabela com dados de servidor tem guildId e todo acesso filtra por ele.
+// Texto bíblico é global (por edição), nunca copiado por servidor.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model GuildSettings {
+  guildId                  String   @id
+  locale                   String   @default("pt-BR")
+  timezone                 String   @default("America/Sao_Paulo")
+  // Bíblia
+  bibleAutoReferences      Boolean  @default(true)
+  bibleAllowedChannelIds   String[] @default([])
+  bibleExcludedChannelIds  String[] @default([])
+  bibleMaxReferences       Int      @default(3)
+  bibleCooldownSeconds     Int      @default(5)
+  psalmNumbering           String   @default("vulgate")
+  allowWebhookMessages     Boolean  @default(false)
+  quotationMatchingEnabled Boolean  @default(false)
+  quotationMinWords        Int      @default(10)
+  quotationChannelIds      String[] @default([])
+  // Liturgia / calendário
+  liturgyEnabled           Boolean  @default(true)
+  liturgyApiVersion        String   @default("v2")
+  calendarVariant          String   @default("general-roman-of")
+  // Santos do dia via Liturgical Calendar API (LitCal): "GENERAL" ou código nacional suportado.
+  romanCalendarId          String   @default("GENERAL")
+  romanCalendarLocale      String   @default("la")
+  // Moderação
+  modLogChannelId          String?
+  mutedRoleId              String?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+}
+
+model BibleEdition {
+  id                  String       @id
+  name                String
+  source              String
+  sourceRevision      String?
+  sourceSha256        String
+  provenance          String
+  rightsStatus        String
+  versificationScheme String
+  verseCount          Int
+  anomalyReport       Json
+  importedAt          DateTime     @default(now())
+  verses              BibleVerse[]
+}
+
+model BibleVerse {
+  id        Int          @id @default(autoincrement())
+  editionId String
+  edition   BibleEdition @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  bookId    String
+  chapter   Int
+  // Número do versículo como consta na fonte. Pode repetir/saltar: ver relatório de anomalias.
+  verse     Int
+  // Posição ordinal do registro no capítulo (preserva a ordem da fonte).
+  seq       Int
+  text      String
+
+  @@unique([editionId, bookId, chapter, seq])
+  @@index([editionId, bookId, chapter, verse])
+}
+
+enum ModerationType {
+  MUTE
+  UNMUTE
+  KICK
+  BAN
+  UNBAN
+  PURGE
+}
+
+enum MuteMechanism {
+  NATIVE_TIMEOUT
+  MUTED_ROLE
+  NONE
+}
+
+enum ModerationStatus {
+  ACTIVE
+  RELEASED
+  EXPIRED
+  SUPERSEDED
+  COMPLETED
+  FAILED
+}
+
+model ModerationAction {
+  id            String           @id @default(cuid())
+  guildId       String
+  type          ModerationType
+  targetUserId  String
+  actorUserId   String
+  reason        String
+  mechanism     MuteMechanism    @default(NONE)
+  status        ModerationStatus
+  durationInput String?
+  startsAt      DateTime         @default(now())
+  expiresAt     DateTime?
+  releasedAt    DateTime?
+  releasedById  String?
+  releaseReason String?
+  metadata      Json?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([guildId, targetUserId, status])
+  @@index([status, expiresAt])
+}
+
+enum ScheduleKind {
+  TEXT
+  LITURGY_DAILY
+}
+
+enum Recurrence {
+  ONCE
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum ScheduleStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  CANCELED
+  COMPLETED
+  ERROR
+}
+
+model ScheduledMessage {
+  id                String              @id @default(cuid())
+  guildId           String
+  channelId         String
+  creatorId         String
+  kind              ScheduleKind        @default(TEXT)
+  payload           Json
+  timezone          String
+  // Data/hora local de referência, "YYYY-MM-DDTHH:mm" no fuso `timezone`.
+  startLocal        String
+  recurrence        Recurrence
+  status            ScheduleStatus      @default(DRAFT)
+  nextRunAt         DateTime?
+  nextOccurrenceKey String?
+  lastAttemptAt     DateTime?
+  lastSuccessAt     DateTime?
+  lastError         String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  deliveries        ScheduledDelivery[]
+
+  @@index([guildId, status])
+  @@index([status, nextRunAt])
+}
+
+enum DeliveryStatus {
+  PENDING
+  DELIVERED
+  FAILED
+  SKIPPED
+}
+
+model ScheduledDelivery {
+  id                 String           @id @default(cuid())
+  scheduledMessageId String
+  scheduledMessage   ScheduledMessage @relation(fields: [scheduledMessageId], references: [id], onDelete: Cascade)
+  occurrenceKey      String
+  status             DeliveryStatus   @default(PENDING)
+  attempts           Int              @default(0)
+  // Envios em várias mensagens: quantas partes já foram entregues (retomada sem repetir).
+  partsSent          Int              @default(0)
+  attemptedAt        DateTime?
+  deliveredAt        DateTime?
+  // IDs das mensagens enviadas, separados por vírgula.
+  discordMessageId   String?
+  error              String?
+  createdAt          DateTime         @default(now())
+
+  @@unique([scheduledMessageId, occurrenceKey])
+}
+
+// Apenas metadados (nome, cor, hash). Não persistimos textos litúrgicos: direitos não verificados.
+model LiturgyDaySummary {
+  source          String
+  version         String
+  date            String
+  celebrationName String
+  color           String?
+  payloadHash     String
+  fetchedAt       DateTime @default(now())
+  expiresAt       DateTime
+
+  @@id([source, version, date])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  guildId     String
+  action      String
+  actorUserId String
+  targetId    String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([guildId, createdAt])
+}

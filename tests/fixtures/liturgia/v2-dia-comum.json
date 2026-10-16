@@ -1,0 +1,30 @@
+{
+  "data": "16/10/2026",
+  "liturgia": "Sexta-feira da 28ª Semana do Tempo Comum",
+  "cor": "Verde",
+  "oracoes": {
+    "coleta": "[coleta omitida]",
+    "oferendas": "[omitida]",
+    "comunhao": "[omitida]",
+    "extras": []
+  },
+  "leituras": {
+    "primeiraLeitura": [
+      {
+        "referencia": "Ef 1, 11-14",
+        "titulo": "Leitura da Carta de São Paulo aos Efésios",
+        "texto": "[texto omitido]"
+      }
+    ],
+    "salmo": [{ "referencia": "Sl 32", "refrao": "[refrão omitido]", "texto": "[salmo omitido]" }],
+    "segundaLeitura": "Não há segunda leitura hoje!",
+    "evangelho": [
+      {
+        "referencia": "Lc 12, 1-7",
+        "titulo": "Proclamação do Evangelho de Jesus Cristo ✠ segundo Lucas",
+        "texto": "[evangelho omitido]"
+      }
+    ]
+  },
+  "antifonas": { "entrada": "[antífona omitida]", "comunhao": "[antífona omitida]" }
+}

@@ -1,0 +1,65 @@
+{
+  "data": "19/04/2025",
+  "liturgia": "Sábado Santo - Vigília Pascal",
+  "cor": "Branco",
+  "oracoes": {
+    "coleta": "[coleta omitida no fixture]",
+    "oferendas": "[oração omitida no fixture]",
+    "comunhao": "[oração omitida no fixture]",
+    "extras": [
+      { "titulo": "Benção do fogo", "texto": "[texto omitido no fixture]" },
+      { "titulo": "Depois da primeira leitura", "texto": "[texto omitido no fixture]" }
+    ]
+  },
+  "leituras": {
+    "primeiraLeitura": [
+      {
+        "referencia": "Gn 1, 1-2, 2 (Forma Longa)",
+        "titulo": "Leitura do Livro do Gênesis",
+        "texto": "[texto omitido A]"
+      },
+      {
+        "referencia": "Gn 1, 1. 26-31a (Forma Breve)",
+        "titulo": "Leitura do Livro do Gênesis",
+        "texto": "[texto omitido B]"
+      }
+    ],
+    "salmo": [
+      { "referencia": "Sl 103", "refrao": "[refrão omitido]", "texto": "[salmo omitido 1]" },
+      { "referencia": "Ex 15, 1-6. 17-18", "refrao": "[refrão omitido]", "texto": "[cântico omitido 2]" }
+    ],
+    "segundaLeitura": [
+      {
+        "referencia": "Gn 22, 1-2. 9a. 10-13. 15-18",
+        "titulo": "Leitura do Livro do Gênesis",
+        "texto": "[texto omitido]"
+      }
+    ],
+    "evangelho": [
+      {
+        "referencia": "Lc 24, 1-12",
+        "titulo": "Proclamação do Evangelho de Jesus Cristo ✠ segundo Lucas",
+        "texto": "[evangelho omitido no fixture]"
+      }
+    ],
+    "extras": [
+      { "titulo": "Proclamação da Páscoa (Exulte)", "texto": "[texto omitido]" },
+      {
+        "tipo": "Terceira Leitura",
+        "referencia": "Ex 14, 15–15, 1",
+        "titulo": "Leitura do Livro do Êxodo",
+        "texto": "[texto omitido]"
+      },
+      {
+        "tipo": "Epístola",
+        "referencia": "Rm 6, 3-11",
+        "titulo": "Leitura da Carta de São Paulo aos Romanos",
+        "texto": "[texto omitido]"
+      }
+    ]
+  },
+  "antifonas": {
+    "entrada": "[antífona omitida]",
+    "comunhao": "[antífona omitida]"
+  }
+}
