@@ -121,6 +121,7 @@ model ModerationAction {
 enum ScheduleKind {
   TEXT
   LITURGY_DAILY
+  ANGELUS
 }
 
 enum Recurrence {
@@ -146,6 +147,8 @@ model ScheduledMessage {
   channelId         String
   creatorId         String
   kind              ScheduleKind        @default(TEXT)
+  // Agendamentos criados juntos (ex.: os horários do Angelus) partilham o mesmo grupo.
+  groupId           String?
   payload           Json
   timezone          String
   // Data/hora local de referência, "YYYY-MM-DDTHH:mm" no fuso `timezone`.
@@ -163,6 +166,7 @@ model ScheduledMessage {
 
   @@index([guildId, status])
   @@index([status, nextRunAt])
+  @@index([guildId, groupId])
 }
 
 enum DeliveryStatus {

@@ -54,4 +54,14 @@ describe('definições de comandos', () => {
     };
     expect(sub.options.find((o) => o.name === 'leituras')!.choices![0]!.value).toBe('full');
   });
+
+  it('/agendar angelus: canal obrigatório e horários 00h/6h/12h/18h por padrão', () => {
+    const agendar = commands.find((c) => c.data.name === 'agendar')!;
+    const sub = agendar.data.options!.find((o) => o.name === 'angelus') as {
+      options: Array<{ name: string; required?: boolean; choices?: Array<{ value: string }> }>;
+    };
+    expect(sub.options.map((o) => o.name)).toEqual(['canal', 'horarios', 'fuso']);
+    expect(sub.options[0]!.required).toBe(true);
+    expect(sub.options[1]!.choices!.map((c) => c.value)).toEqual(['all', 'traditional', 'noon']);
+  });
 });

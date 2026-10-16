@@ -235,6 +235,43 @@ describeDb('Agendamentos (PostgreSQL)', () => {
     expect((await schedules.cancel('g2', schedule.id, 'intruso')).ok).toBe(false);
   });
 
+  it('Angelus: um agendamento por horário, ativados juntos, post com a oração do dia', async () => {
+    clock = new Date('2026-10-16T12:00:00Z'); // 09:00 em São Paulo
+    const groupId = 'grupo-angelus';
+    for (const hhmm of ['00:00', '06:00', '12:00', '18:00']) {
+      const d = await schedules.createDraft({
+        guildId: 'g1',
+        channelId: 'c1',
+        creatorId: 'admin',
+        kind: 'ANGELUS',
+        payload: {},
+        timezone: 'America/Sao_Paulo',
+        startLocal: `2026-10-16T${hhmm}`,
+        recurrence: 'DAILY',
+        groupId,
+      });
+      expect(d.ok).toBe(true);
+    }
+    expect(jobs.jobs.size).toBe(0);
+    const results = await schedules.activateGroup('g1', groupId, 'admin');
+    expect(results.every((r) => r.ok)).toBe(true);
+    expect(results.map((r) => r.ok && r.next?.key)).toEqual([
+      '2026-10-17T00:00',
+      '2026-10-17T06:00',
+      '2026-10-16T12:00',
+      '2026-10-16T18:00',
+    ]);
+    expect(jobs.jobs.size).toBe(4);
+
+    clock = new Date('2026-10-16T15:00:00Z'); // 12:00 em São Paulo
+    await jobs.runDue(clock, handlers());
+    expect(sender.sent).toHaveLength(1);
+    const embed = (sender.sent[0]!.message.embeds as Array<{ title: string; description: string }>)[0]!;
+    expect(embed.title).toBe('Angelus');
+    expect(embed.description).toBe('🔔 12h · sexta-feira, 16 de outubro de 2026');
+    expect(await schedules.activateGroup('g1', groupId, 'admin')).toEqual([]); // nada de rascunho restante
+  });
+
   describe_daily();
 
   function describe_daily() {

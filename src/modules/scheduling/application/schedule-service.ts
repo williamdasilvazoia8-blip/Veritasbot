@@ -16,6 +16,7 @@ export interface CreateScheduleInput {
   timezone: string;
   startLocal: string;
   recurrence: Recurrence;
+  groupId?: string;
 }
 
 export type ScheduleResult =
@@ -101,6 +102,26 @@ export class ScheduleService {
       targetId: id,
     });
     return { ok: true, schedule: updated, next };
+  }
+
+  /** Ativa todos os rascunhos de um grupo (ex.: os horários do Angelus). */
+  async activateGroup(guildId: string, groupId: string, actorId: string): Promise<ScheduleResult[]> {
+    const drafts = await this.prisma.scheduledMessage.findMany({
+      where: { guildId, groupId, status: 'DRAFT' },
+      orderBy: { startLocal: 'asc' },
+    });
+    const results: ScheduleResult[] = [];
+    for (const d of drafts) results.push(await this.activate(guildId, d.id, actorId));
+    return results;
+  }
+
+  /** Descarta todos os rascunhos de um grupo. */
+  async cancelGroup(guildId: string, groupId: string, actorId: string): Promise<number> {
+    const drafts = await this.prisma.scheduledMessage.findMany({
+      where: { guildId, groupId, status: 'DRAFT' },
+    });
+    for (const d of drafts) await this.cancel(guildId, d.id, actorId);
+    return drafts.length;
   }
 
   async pause(guildId: string, id: string, actorId: string): Promise<ScheduleResult> {

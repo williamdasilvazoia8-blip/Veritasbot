@@ -6,6 +6,7 @@ import type { LitcalCalendarId, LitcalLocale } from '../../calendar/providers/li
 import type { LiturgyLocale } from '../../liturgy/domain/types.js';
 import { composeDailyPost } from '../../liturgy/presentation/daily-post.js';
 import { addDays } from '../../../shared/dates.js';
+import { angelusEmbed } from '../../prayers/angelus.js';
 import type { MessageRenderer } from './delivery-service.js';
 import { liturgyPayloadSchema, textPayloadSchema, type OutgoingMessage } from './types.js';
 
@@ -38,6 +39,16 @@ export class ScheduledMessageRenderer implements MessageRenderer {
       }
       return [
         { content: mentions ? `${mentions}\n${p.content}` : p.content, allowedRoleIds: p.mentionRoleIds },
+      ];
+    }
+
+    if (schedule.kind === 'ANGELUS') {
+      // Data e hora locais nominais da ocorrência ("YYYY-MM-DDTHH:mm").
+      return [
+        {
+          embeds: [angelusEmbed(occurrenceKey.slice(0, 10), occurrenceKey.slice(11, 16))],
+          allowedRoleIds: [],
+        },
       ];
     }
 

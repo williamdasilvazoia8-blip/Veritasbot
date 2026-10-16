@@ -14,6 +14,7 @@ import {
   type GuildBasedChannel,
   type SlashCommandStringOption,
 } from 'discord.js';
+import { randomUUID } from 'node:crypto';
 import { IANAZone } from 'luxon';
 import type { ScheduledMessage } from '@prisma/client';
 import type { ButtonHandler, SlashCommand } from '../../../bot/types.js';
@@ -22,6 +23,7 @@ import { requireMemberPermission } from '../../../bot/guards.js';
 import { localDate, parseBrDate } from '../../../shared/dates.js';
 import { escapeDiscord, truncate } from '../../../shared/discord-text.js';
 import { RECURRENCE_LABEL, type RecurrenceKind } from '../domain/recurrence.js';
+import { ANGELUS_HOUR_SETS, hourLabel } from '../../prayers/angelus.js';
 import { liturgyPayloadSchema, textPayloadSchema, type OutgoingMessage } from '../application/types.js';
 
 const RECURRENCE_CHOICES = [
@@ -126,6 +128,31 @@ const data = new SlashCommandBuilder()
         o.setName('fuso').setDescription('Fuso IANA (padrão: do servidor)').setMaxLength(64),
       ),
   )
+  .addSubcommand((s) =>
+    s
+      .setName('angelus')
+      .setDescription('Post diário do Angelus (Regina Caeli no Tempo Pascal), em latim e português')
+      .addChannelOption((o) =>
+        o
+          .setName('canal')
+          .setDescription('Canal de destino')
+          .setRequired(true)
+          .addChannelTypes(...channelTypes),
+      )
+      .addStringOption((o) =>
+        o
+          .setName('horarios')
+          .setDescription('Horários diários (padrão: 00h, 6h, 12h e 18h)')
+          .addChoices(
+            { name: '00h, 6h, 12h e 18h', value: 'all' },
+            { name: '6h, 12h e 18h (tradicional)', value: 'traditional' },
+            { name: 'Só 12h', value: 'noon' },
+          ),
+      )
+      .addStringOption((o) =>
+        o.setName('fuso').setDescription('Fuso IANA (padrão: do servidor)').setMaxLength(64),
+      ),
+  )
   .addSubcommand((s) => s.setName('listar').setDescription('Lista os agendamentos'))
   .addSubcommand((s) => s.setName('ver').setDescription('Detalhes e últimas entregas').addStringOption(idOpt))
   .addSubcommand((s) =>
@@ -211,7 +238,9 @@ function summary(s: ScheduledMessage): string {
   const kind =
     s.kind === 'LITURGY_DAILY'
       ? describeLiturgyPayload(s.payload)
-      : truncate(escapeDiscord(textPayloadSchema.safeParse(s.payload).data?.content ?? ''), 60);
+      : s.kind === 'ANGELUS'
+        ? `Angelus · ${hourLabel(s.startLocal.slice(11, 16))}`
+        : truncate(escapeDiscord(textPayloadSchema.safeParse(s.payload).data?.content ?? ''), 60);
   const next = s.nextRunAt ? time(s.nextRunAt, TimestampStyles.ShortDateTime) : '—';
   return `\`${s.id.slice(-8)}\` ${status[s.status]} · <#${s.channelId}> · ${RECURRENCE_LABEL[s.recurrence as RecurrenceKind]} · próxima: ${next}\n↳ ${kind}`;
 }
@@ -337,6 +366,66 @@ export const agendarCommand: SlashCommand = {
       return;
     }
 
+    if (sub === 'angelus') {
+      const channel = o.getChannel('canal', true, [...channelTypes]);
+      const chErr = checkChannel(interaction, channel);
+      if (chErr) return void (await reply(chErr));
+      const hours = ANGELUS_HOUR_SETS[(o.getString('horarios') ?? 'all') as keyof typeof ANGELUS_HOUR_SETS];
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      // Um agendamento diário por horário, todos no mesmo grupo (ativados/descartados juntos).
+      const groupId = randomUUID();
+      const today = localDate(tz);
+      const created: Array<{ schedule: ScheduledMessage; runAt: Date }> = [];
+      for (const hhmm of hours) {
+        const res = await ctx.schedules.createDraft({
+          guildId: interaction.guildId,
+          channelId: channel.id,
+          creatorId: interaction.user.id,
+          timezone: tz,
+          kind: 'ANGELUS',
+          payload: {},
+          startLocal: `${today}T${hhmm}`,
+          recurrence: 'DAILY',
+          groupId,
+        });
+        if (!res.ok) {
+          await ctx.schedules.cancelGroup(interaction.guildId, groupId, interaction.user.id);
+          return void (await interaction.editReply(res.error));
+        }
+        created.push({ schedule: res.schedule, runAt: res.next!.runAt });
+      }
+      const first = created.reduce((a, b) => (a.runAt <= b.runAt ? a : b));
+      const preview = await ctx.renderer.render(first.schedule, first.schedule.startLocal, 99);
+      const info = new EmbedBuilder()
+        .setTitle('Pré-visualização do agendamento')
+        .setColor(0x8b6f3a)
+        .setDescription(
+          [
+            `**Canal:** <#${channel.id}>`,
+            `**Horários:** ${hours.map(hourLabel).join(', ')}, todos os dias (${tz})`,
+            `**Primeiro envio:** ${time(first.runAt, TimestampStyles.LongDateTime)} (${time(first.runAt, TimestampStyles.RelativeTime)})`,
+            '',
+            'Confira abaixo como a mensagem ficará e clique em **Ativar**.',
+          ].join('\n'),
+        );
+      const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`sched:activate-group:${groupId}`)
+          .setLabel('Ativar')
+          .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+          .setCustomId(`sched:discard-group:${groupId}`)
+          .setLabel('Descartar')
+          .setStyle(ButtonStyle.Secondary),
+      );
+      await interaction.editReply({
+        embeds: [info.toJSON(), ...((preview[0]?.embeds ?? []) as APIEmbed[])],
+        components: [row],
+        allowedMentions: { parse: [] },
+      });
+      return;
+    }
+
     if (sub === 'listar') {
       const list = await ctx.schedules.list(interaction.guildId);
       if (!list.length) return void (await reply('Nenhum agendamento.'));
@@ -403,7 +492,7 @@ export const agendarCommand: SlashCommand = {
       const msg = o.getString('mensagem');
       if (msg) {
         if (s.kind !== 'TEXT')
-          return void (await reply('O texto de um anúncio de liturgia é gerado automaticamente.'));
+          return void (await reply('O texto deste agendamento é gerado automaticamente.'));
         patch.payload = { ...textPayloadSchema.parse(s.payload), content: msg.replace(/\\n/g, '\n') };
       }
       const readings = o.getString('leituras');
@@ -430,8 +519,8 @@ export const agendarCommand: SlashCommand = {
       if (`${date}T${hhmm}` !== s.startLocal) patch.startLocal = `${date}T${hhmm}`;
       const rec = o.getString('recorrencia');
       if (rec) {
-        if (s.kind === 'LITURGY_DAILY' && rec !== 'DAILY')
-          return void (await reply('O anúncio de liturgia é sempre diário.'));
+        if (s.kind !== 'TEXT' && rec !== 'DAILY')
+          return void (await reply('Este tipo de agendamento é sempre diário.'));
         patch.recurrence = rec as RecurrenceKind;
       }
       const channel = o.getChannel('canal', false, [...channelTypes]);
@@ -476,7 +565,9 @@ export const agendarCommand: SlashCommand = {
           const label =
             s.kind === 'LITURGY_DAILY'
               ? describeLiturgyPayload(s.payload)
-              : (textPayloadSchema.safeParse(s.payload).data?.content ?? '');
+              : s.kind === 'ANGELUS'
+                ? `Angelus · ${hourLabel(s.startLocal.slice(11, 16))}`
+                : (textPayloadSchema.safeParse(s.payload).data?.content ?? '');
           return { name: truncate(`${s.id.slice(-8)} · ${s.status} · ${label}`, 100), value: s.id };
         }),
     );
@@ -525,6 +616,24 @@ export const scheduleButtons: ButtonHandler = {
       const res = await ctx.schedules.cancel(interaction.guildId, id, interaction.user.id);
       await interaction.update({
         content: res.ok ? 'Rascunho descartado.' : `❌ ${res.error}`,
+        embeds: [],
+        components: [],
+      });
+    } else if (action === 'activate-group') {
+      const results = await ctx.schedules.activateGroup(interaction.guildId, id, interaction.user.id);
+      const ok = results.filter((r): r is Extract<typeof r, { ok: true }> => r.ok);
+      const next = ok.map((r) => r.next!.runAt).sort((a, b) => a.getTime() - b.getTime())[0];
+      await interaction.update({
+        content: ok.length
+          ? `✅ ${ok.length} horário(s) ativado(s): ${ok.map((r) => hourLabel(r.schedule.startLocal.slice(11, 16))).join(', ')}. Próximo envio: ${time(next!, TimestampStyles.LongDateTime)}.`
+          : '❌ Nada para ativar (o rascunho já foi ativado ou descartado).',
+        embeds: [],
+        components: [],
+      });
+    } else if (action === 'discard-group') {
+      const n = await ctx.schedules.cancelGroup(interaction.guildId, id, interaction.user.id);
+      await interaction.update({
+        content: n ? 'Rascunho descartado.' : '❌ Nada para descartar.',
         embeds: [],
         components: [],
       });
