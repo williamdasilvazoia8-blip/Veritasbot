@@ -7,8 +7,10 @@ services:
       POSTGRES_DB: veritasbot
     volumes:
       - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    # Só acessível na própria máquina (nunca exponha o PostgreSQL à internet).
     ports:
-      - '5432:5432'
+      - '127.0.0.1:5432:5432'
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 5s
@@ -19,8 +21,9 @@ services:
     command: ['redis-server', '--appendonly', 'yes']
     volumes:
       - redisdata:/data
+    restart: unless-stopped
     ports:
-      - '6379:6379'
+      - '127.0.0.1:6379:6379'
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 5s

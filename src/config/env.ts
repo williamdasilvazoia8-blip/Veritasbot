@@ -42,7 +42,8 @@ export const envSchema = z.object({
 export type Env = z.infer<typeof envSchema>;
 
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
-  const parsed = envSchema.safeParse(source);
+  // Cloud Run (e similares) informam a porta em PORT; HEALTH_PORT explícito tem prioridade.
+  const parsed = envSchema.safeParse({ ...source, HEALTH_PORT: source.HEALTH_PORT ?? source.PORT });
   if (!parsed.success) {
     const issues = parsed.error.issues.map((i) => `  - ${i.path.join('.')}: ${i.message}`).join('\n');
     throw new Error(`Configuração inválida:\n${issues}`);

@@ -7,7 +7,8 @@
  *   npm run bible:import -- --source ./data/bible/biblia.json --revision <commit> \
  *     --rights-status unverified [--dry-run]
  */
-import { readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { dirname } from 'node:path';
 import { parseArgs } from 'node:util';
 import { importMatosSoares } from '../src/modules/bible/import/matos-soares.js';
 import { saveEdition } from '../src/modules/bible/persistence/bible-repository.js';
@@ -45,20 +46,26 @@ console.log(
 console.log('Anomalias de numeração:', result.summary.anomaliesByKind);
 
 const reportPath = values.report ?? `data/bible/import-report-${values.edition}.json`;
-await writeFile(
-  reportPath,
-  JSON.stringify(
-    {
-      sha256: result.sha256,
-      revision: values.revision ?? null,
-      ...result.summary,
-      anomalies: result.anomalies,
-    },
-    null,
-    2,
-  ),
-);
-console.log(`Relatório: ${reportPath}`);
+try {
+  await mkdir(dirname(reportPath), { recursive: true });
+  await writeFile(
+    reportPath,
+    JSON.stringify(
+      {
+        sha256: result.sha256,
+        revision: values.revision ?? null,
+        ...result.summary,
+        anomalies: result.anomalies,
+      },
+      null,
+      2,
+    ),
+  );
+  console.log(`Relatório: ${reportPath}`);
+} catch (err) {
+  // O relatório também fica gravado no banco (BibleEdition.anomalyReport); não impede a importação.
+  console.warn(`Não foi possível gravar o relatório em ${reportPath}: ${(err as Error).message}`);
+}
 
 if (values['dry-run']) {
   console.log('--dry-run: nada gravado no banco.');

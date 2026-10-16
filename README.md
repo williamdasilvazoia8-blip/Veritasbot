@@ -57,10 +57,14 @@ npm run liturgy:smoke -- America/Sao_Paulo                    # live API check (
 
 ## 4. Deploy
 
-`docker compose --profile bot up -d --build` runs Postgres, Redis and the bot; the bot container applies
-pending migrations on start (`prisma migrate deploy`). Import the Bible once with the bot image or locally
-against the production `DATABASE_URL`. Bot and job worker run in one process; scale horizontally only after
-moving the worker into its own process (BullMQ already makes job processing safe across workers).
+**Google Cloud:** see [`docs/deploy-google-cloud.md`](docs/deploy-google-cloud.md). It recommends one
+Compute Engine VM running `docker compose`. App Engine and default Cloud Run settings scale to zero,
+which breaks the permanent Discord connection.
+
+Anywhere with Docker: `docker compose --profile bot up -d --build` runs PostgreSQL, Redis and the bot.
+The bot container applies pending migrations on start. Import the Bible once with
+`docker compose --profile bot run --rm -v <biblia.json>:/data/biblia.json:ro bot node dist/scripts/import-bible.js --source /data/biblia.json …`.
+Run **exactly one** bot instance: a second one would answer every message twice.
 
 ## 5. Using it (admins)
 
