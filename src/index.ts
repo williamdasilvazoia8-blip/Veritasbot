@@ -83,7 +83,7 @@ async function main() {
     const doc = references.info(id);
     if (doc) logger.info({ id, units: doc.units.length }, 'Documento de referência carregado');
     else if (env.REFERENCE_TEXTS_ENABLED)
-      logger.warn({ id }, 'Documento de referência não importado (npm run references:import)');
+      logger.warn({ id }, 'Documento de referência não importado (node dist/scripts/import-references.js)');
   }
   const documentReplies = new DocumentAutoReplyService(references, {
     isGuildAllowed: (guildId) => referencesAllowed({ env }, guildId),

@@ -80,7 +80,7 @@ function buildCommand(spec: CommandSpec): SlashCommand {
       }
       if (!ctx.references.has(spec.id)) {
         await interaction.reply({
-          content: `O ${DOCUMENTS[spec.id].name} ainda não foi importado neste bot (\`npm run references:import\`).`,
+          content: `O ${DOCUMENTS[spec.id].name} ainda não foi importado neste bot (admin: \`node dist/scripts/import-references.js\`).`,
           flags: MessageFlags.Ephemeral,
         });
         return;
