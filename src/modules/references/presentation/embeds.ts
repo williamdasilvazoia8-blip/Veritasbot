@@ -12,7 +12,7 @@ export function documentAttribution(id: ReferenceDocumentId): string {
 
 /**
  * Uma embed por parágrafo/cânon (o mais longo tem ~2000 caracteres). A secção aparece em
- * letra pequena; o título liga à página oficial. Números sem texto na fonte são indicados.
+ * letra pequena; cada uma termina com o link para a página oficial. Números sem texto na fonte são indicados.
  */
 export function unitEmbeds(
   id: ReferenceDocumentId,
@@ -21,13 +21,16 @@ export function unitEmbeds(
 ): EmbedBuilder[] {
   const embeds = units.map((u) => {
     const context = u.context ? `-# ${escapeDiscord(truncate(u.context, 300))}\n` : '';
-    const embed = new EmbedBuilder()
+    // O link vai no texto e não em setURL: o Discord junta numa só as embeds de uma mensagem
+    // que têm o mesmo URL (ex.: §27-30, todos na mesma página do vatican.va) e mostra só a 1.ª.
+    const url = u.sourceUrl ?? DOCUMENTS[id].sourceUrl;
+    const link = /^https:\/\/[^\s()]+$/.test(url) ? `\n-# [Texto oficial](${url})` : '';
+    return new EmbedBuilder()
       .setColor(DOCUMENT_COLORS[id])
       .setTitle(truncate(formatUnitRange(id, u.number), DISCORD_LIMITS.embedTitle))
-      .setDescription(truncate(`${context}${escapeDiscord(u.text)}`, DISCORD_LIMITS.embedDescription));
-    const url = u.sourceUrl ?? DOCUMENTS[id].sourceUrl;
-    if (/^https:\/\/\S+$/.test(url)) embed.setURL(url);
-    return embed;
+      .setDescription(
+        truncate(`${context}${escapeDiscord(u.text)}`, DISCORD_LIMITS.embedDescription - link.length) + link,
+      );
   });
   const last = embeds.at(-1);
   if (last) {

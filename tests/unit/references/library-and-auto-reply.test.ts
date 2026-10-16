@@ -102,11 +102,23 @@ describe('DocumentAutoReplyService', () => {
 });
 
 describe('unitEmbeds', () => {
+  it('não repete o URL da embed (o Discord juntaria §27-30 numa só)', () => {
+    const embeds = unitEmbeds('ccc', [unit(27, 'a'), unit(28, 'b'), unit(29, 'c')]);
+    expect(embeds).toHaveLength(3);
+    expect(embeds.every((e) => e.data.url === undefined)).toBe(true);
+    expect(embeds.map((e) => e.data.title)).toEqual([
+      'Catecismo da Igreja Católica, §27',
+      'Catecismo da Igreja Católica, §28',
+      'Catecismo da Igreja Católica, §29',
+    ]);
+  });
+
   it('atribui a fonte, liga à página oficial, escapa markdown e indica buracos', () => {
     const embeds = unitEmbeds('ccc', [unit(1, '*negrito* @everyone')], { missing: [3] });
     const e = embeds[0]!.data;
     expect(e.title).toBe('Catecismo da Igreja Católica, §1');
-    expect(e.url).toBe('https://www.vatican.va/archive/x.html');
+    expect(e.url).toBeUndefined();
+    expect(e.description).toContain('[Texto oficial](https://www.vatican.va/archive/x.html)');
     expect(e.description).toContain('\\*negrito\\*');
     expect(e.description).not.toContain('@everyone');
     expect(e.description).toContain('Sem texto na fonte: §3.');
