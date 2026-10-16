@@ -5,12 +5,14 @@ import { calendarioCommand } from '../modules/liturgy/commands/calendario.js';
 import { moderationCommands } from '../modules/moderation/commands/moderation-commands.js';
 import { agendarCommand, scheduleButtons } from '../modules/scheduling/commands/agendar.js';
 import { configCommand } from '../modules/guild-settings/config-command.js';
+import { helpButtons, helpCommand } from '../modules/help/help-command.js';
 import {
   catecismoCommand,
   direitoCanonicoCommand,
 } from '../modules/references/commands/reference-commands.js';
 
 export const commands: SlashCommand[] = [
+  helpCommand,
   bibliaCommand,
   liturgiaCommand,
   calendarioCommand,
@@ -21,4 +23,4 @@ export const commands: SlashCommand[] = [
   ...moderationCommands,
 ];
 
-export const buttons: ButtonHandler[] = [scheduleButtons];
+export const buttons: ButtonHandler[] = [scheduleButtons, helpButtons];

@@ -14,6 +14,7 @@ Discord bot for Portuguese-speaking Roman Catholic communities.
 | Liturgical calendar: computus, seasons, weeks, A/B/C & I/II cycles (`/calendario …`)                                                                     | ✅ foundation; no precedence engine yet                                   |
 | Moderation: `/mute` (s, min, h, d, sem, mo, y), `/unmute`, `/mute-status`, `/kick`, `/ban`, `/unban`, `/purge`, `/modlogs`, `/configurar-silenciado`     | ✅                                                                        |
 | Scheduled & recurring announcements `/agendar criar · listar · ver · editar · cancelar · pausar · retomar`                                               | ✅                                                                        |
+| `/help` — categorised guide to every command, accepted formats and limits (ephemeral, button navigation)                                                 | ✅                                                                        |
 | 1962 calendar                                                                                                                                            | 📝 design only (`docs/calendar-roadmap.md`)                               |
 
 ## 1. Discord application setup
