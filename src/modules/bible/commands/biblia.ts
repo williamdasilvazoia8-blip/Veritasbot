@@ -20,6 +20,9 @@ import {
 import { escapeDiscord, truncate } from '../../../shared/discord-text.js';
 import { foldPreservingLength } from '../../../shared/text-normalize.js';
 import { hebrewToVulgate } from '../domain/psalms-versification.js';
+import { channelRule } from '../application/auto-reference-service.js';
+import { replyCapabilities } from '../../../bot/reply-capabilities.js';
+import { referencesAllowed } from '../../references/commands/reference-commands.js';
 
 const MAX_MANUAL_VERSES = 60;
 
@@ -57,6 +60,23 @@ const data = new SlashCommandBuilder()
       ),
   )
   .addSubcommand((s) => s.setName('aleatorio').setDescription('Um versículo aleatório'))
+  .addSubcommand((s) =>
+    s
+      .setName('diagnostico')
+      .setDescription('(Admin) Explica por que o bot responde ou não a referências num canal')
+      .addChannelOption((o) =>
+        o
+          .setName('canal')
+          .setDescription('Canal a verificar (padrão: este)')
+          .addChannelTypes(
+            ChannelType.GuildText,
+            ChannelType.GuildAnnouncement,
+            ChannelType.PublicThread,
+            ChannelType.PrivateThread,
+            ChannelType.AnnouncementThread,
+          ),
+      ),
+  )
   .addSubcommand((s) =>
     s
       .setName('configuracao')
@@ -129,6 +149,8 @@ export const bibliaCommand: SlashCommand = {
         return aleatorio(interaction, ctx);
       case 'configuracao':
         return configuracao(interaction, ctx);
+      case 'diagnostico':
+        return diagnostico(interaction, ctx);
     }
   },
   async autocomplete(interaction) {
@@ -257,6 +279,81 @@ async function aleatorio(interaction: ChatInputCommandInteraction<'cached'>, ctx
     embeds: passageEmbeds(res.passage, { maxPages: 1 }),
     allowedMentions: { parse: [] },
   });
+}
+
+async function diagnostico(interaction: ChatInputCommandInteraction<'cached'>, ctx: AppContext) {
+  if (!(await requireMemberPermission(interaction, PermissionFlagsBits.ManageGuild, 'Gerenciar Servidor')))
+    return;
+  const channel = interaction.options.getChannel('canal') ?? interaction.channel;
+  if (!channel || !('permissionsFor' in channel)) {
+    await interaction.reply({ content: 'Não consegui verificar este canal.', flags: MessageFlags.Ephemeral });
+    return;
+  }
+  const s = await ctx.settings.get(interaction.guildId);
+  const me = interaction.guild.members.me ?? (await interaction.guild.members.fetchMe().catch(() => null));
+  const perms = me ? channel.permissionsFor(me) : null;
+  const isThread = channel.isThread();
+  const can = replyCapabilities(perms, isThread);
+  const ok = (v: boolean) => (v ? '✅' : '❌');
+  const rule = channelRule(
+    [channel.id, channel.parentId],
+    s.bibleAllowedChannelIds,
+    s.bibleExcludedChannelIds,
+  );
+  const blockers: string[] = [];
+
+  const config = [
+    `${ok(Boolean(ctx.bible.provider.edition))} Bíblia importada${ctx.bible.provider.edition ? '' : ' — sem texto, nada a responder'}`,
+    `${ok(ctx.env.BIBLE_AUTO_REFERENCES_ENABLED)} Respostas automáticas ligadas no bot (\`BIBLE_AUTO_REFERENCES_ENABLED\`)`,
+    `${ok(s.bibleAutoReferences)} Respostas automáticas ligadas neste servidor (\`/biblia configuracao automatico:\`)`,
+    rule === 'ok'
+      ? '✅ Canal permitido'
+      : rule === 'excluded'
+        ? '❌ Canal (ou a categoria/canal pai) está na lista de **excluídos**'
+        : '❌ Há uma lista de canais **permitidos** e este canal (nem a categoria) não está nela',
+    `ℹ️ Cooldown de ${s.bibleCooldownSeconds}s por canal · até ${s.bibleMaxReferences} referência(s) por mensagem`,
+  ];
+  if (!ctx.bible.provider.edition) blockers.push('importar a Bíblia');
+  if (!ctx.env.BIBLE_AUTO_REFERENCES_ENABLED || !s.bibleAutoReferences)
+    blockers.push('ligar as respostas automáticas');
+  if (rule !== 'ok') blockers.push('ajustar as listas de canais em `/biblia configuracao`');
+
+  const permissions = [
+    `${ok(Boolean(perms?.has(PermissionFlagsBits.ViewChannel)))} Ver canal — sem isto o bot nem recebe as mensagens`,
+    `${ok(can.send)} ${isThread ? 'Enviar mensagens em tópicos' : 'Enviar mensagens'}`,
+    `${can.embeds ? '✅' : '⚠️'} Inserir links — sem isto responde em texto simples`,
+    `${can.reply ? '✅' : '⚠️'} Ler histórico de mensagens — sem isto envia sem citar a mensagem`,
+  ];
+  if (!can.send) blockers.push('dar ao cargo do bot **Ver canal** e **Enviar mensagens** neste canal');
+
+  const refsAllowed = referencesAllowed(ctx, interaction.guildId);
+  const documents = (['ccc', 'cic'] as const).map(
+    (id) =>
+      `${ok(refsAllowed && ctx.references.has(id))} ${id === 'ccc' ? 'Catecismo' : 'Código de Direito Canónico'}` +
+      (!refsAllowed ? ' — desativado para este servidor' : ctx.references.has(id) ? '' : ' — não importado'),
+  );
+
+  const embed = new EmbedBuilder()
+    .setColor(blockers.length ? 0xc62828 : 0x2e7d32)
+    .setTitle(truncate(`Diagnóstico das respostas automáticas — #${channel.name}`, 256))
+    .setDescription(
+      blockers.length
+        ? `**O bot não vai responder aqui.** Para corrigir: ${blockers.join('; ')}.`
+        : '**Tudo certo:** o bot deve responder a `João 3,16`, `CCC 1234` e `cân. 1055` neste canal.',
+    )
+    .addFields(
+      { name: 'Configuração', value: config.join('\n') },
+      { name: 'Permissões do bot neste canal', value: permissions.join('\n') },
+      { name: 'Catecismo e Código', value: documents.join('\n') },
+      {
+        name: 'Ainda não responde?',
+        value:
+          'O cooldown ignora referências enviadas logo após outra resposta no mesmo canal. Mensagens de bots e ' +
+          'webhooks são ignoradas. Se não responder em **nenhum** servidor, verifique o **Message Content Intent** ' +
+          'no Discord Developer Portal.',
+      },
+    );
+  await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral, allowedMentions: { parse: [] } });
 }
 
 async function configuracao(interaction: ChatInputCommandInteraction<'cached'>, ctx: AppContext) {

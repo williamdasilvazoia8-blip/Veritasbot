@@ -155,3 +155,13 @@ describe('AutoReferenceService', () => {
     });
   });
 });
+
+describe('channelRule', () => {
+  it('excluído ganha; lista de permitidos vale para o canal ou a categoria', async () => {
+    const { channelRule } = await import('../../../src/modules/bible/application/auto-reference-service.js');
+    expect(channelRule(['c', 'cat'], [], [])).toBe('ok');
+    expect(channelRule(['c', 'cat'], ['cat'], [])).toBe('ok');
+    expect(channelRule(['c', null], ['outro'], [])).toBe('not-allowed');
+    expect(channelRule(['c', 'cat'], ['c'], ['cat'])).toBe('excluded');
+  });
+});

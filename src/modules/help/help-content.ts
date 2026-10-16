@@ -78,6 +78,12 @@ export const HELP_CATEGORIES: HelpCategory[] = [
           '`aleatorio`: um versículo ao acaso.',
       },
       {
+        name: '`/biblia diagnostico [canal:]` — ' + ADMIN,
+        value:
+          'O bot não responde a referências num canal? Mostra o motivo: configuração do servidor, listas de canais, ' +
+          'cooldown e permissões do bot ali (Ver canal, Enviar mensagens, Inserir links, Ler histórico).',
+      },
+      {
         name: '`/biblia configuracao` — ' + ADMIN,
         value: [
           '• `automatico` — liga/desliga as respostas automáticas (também as do Catecismo/Código)',

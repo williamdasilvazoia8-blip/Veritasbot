@@ -46,6 +46,7 @@ const settings = {
 const ctx = () =>
   ({
     settings: { get: async () => settings },
+    logger: { warn: vi.fn() },
     autoReferences: new AutoReferenceService(syntheticProvider(), {
       maxVersesPerPassage: 20,
       globalEnabled: true,
@@ -92,6 +93,60 @@ describe('onMessageCreate (handler do Discord)', () => {
       'João 3,16',
       'Código de Direito Canónico, cân. 1055',
     ]);
+  });
+
+  it('sem "Inserir links" responde em texto; sem "Ler histórico" envia sem citar', async () => {
+    const { PermissionFlagsBits } = await import('discord.js');
+    const send = vi.fn(async () => ({}));
+    const only = (...denied: bigint[]) => ({ has: (p: bigint) => !denied.includes(p) });
+    const a = fakeMessage('João 3:16', {
+      channel: {
+        isThread: () => false,
+        type: 0,
+        parentId: null,
+        permissionsFor: () => only(PermissionFlagsBits.EmbedLinks),
+        send,
+      },
+    });
+    await onMessageCreate(a.msg as never, ctx());
+    const payload = (a.reply.mock.calls[0] as unknown as [{ content: string; embeds?: unknown }])[0];
+    expect(payload.embeds).toBeUndefined();
+    expect(payload.content).toContain('**João 3,16**');
+
+    const b = fakeMessage('João 3:16', {
+      channel: {
+        isThread: () => false,
+        type: 0,
+        parentId: null,
+        permissionsFor: () => only(PermissionFlagsBits.ReadMessageHistory),
+        send,
+      },
+    });
+    await onMessageCreate(b.msg as never, ctx());
+    expect(b.reply).not.toHaveBeenCalled();
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it('busca o próprio membro quando não está em cache (servidores grandes)', async () => {
+    const fetchMe = vi.fn(async () => ({ id: 'bot' }));
+    const { msg, reply } = fakeMessage('João 3:16', { guild: { members: { me: null, fetchMe } } });
+    await onMessageCreate(msg as never, ctx());
+    expect(fetchMe).toHaveBeenCalled();
+    expect(reply).toHaveBeenCalledTimes(1);
+  });
+
+  it('não envia nada sem "Enviar mensagens"', async () => {
+    const { PermissionFlagsBits } = await import('discord.js');
+    const { msg, reply } = fakeMessage('João 3:16', {
+      channel: {
+        isThread: () => false,
+        type: 0,
+        parentId: null,
+        permissionsFor: () => ({ has: (p: bigint) => p !== PermissionFlagsBits.SendMessages }),
+      },
+    });
+    await onMessageCreate(msg as never, ctx());
+    expect(reply).not.toHaveBeenCalled();
   });
 
   it('ignora mensagens de bots e do próprio bot', async () => {

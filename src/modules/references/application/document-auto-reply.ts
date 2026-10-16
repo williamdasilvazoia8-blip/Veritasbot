@@ -1,6 +1,7 @@
-import type {
-  AutoReferenceSettings,
-  IncomingMessage,
+import {
+  channelRule,
+  type AutoReferenceSettings,
+  type IncomingMessage,
 } from '../../bible/application/auto-reference-service.js';
 import { parseDocumentReferences, type DocumentReference } from '../parsing/reference-parser.js';
 import type { ReferenceLibrary } from './reference-library.js';
@@ -40,9 +41,8 @@ export class DocumentAutoReplyService {
     if (this.processed.has(msg.id)) return [];
     this.processed.set(msg.id, now);
 
-    const ids = [msg.channelId, msg.parentChannelId].filter((x): x is string => Boolean(x));
-    if (ids.some((id) => s.excludedChannelIds.includes(id))) return [];
-    if (s.allowedChannelIds.length > 0 && !ids.some((id) => s.allowedChannelIds.includes(id))) return [];
+    if (channelRule([msg.channelId, msg.parentChannelId], s.allowedChannelIds, s.excludedChannelIds) !== 'ok')
+      return [];
 
     const key = `${msg.guildId}:${msg.channelId}`;
     const last = this.lastReplyByChannel.get(key);

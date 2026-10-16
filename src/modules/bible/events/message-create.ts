@@ -1,4 +1,4 @@
-import { ChannelType, EmbedBuilder, PermissionFlagsBits, type Message } from 'discord.js';
+import { ChannelType, EmbedBuilder, type Message } from 'discord.js';
 import type { AppContext } from '../../../app/context.js';
 import { BIBLE_COLOR, passageEmbeds, packEmbeds } from '../../../bot/embeds/bible.js';
 import { formatCitation } from '../application/passage-formatter.js';
@@ -6,6 +6,8 @@ import type { AutoReply, IncomingMessage } from '../application/auto-reference-s
 import type { GuildSettings } from '../../guild-settings/settings-service.js';
 import { unitEmbeds } from '../../references/presentation/embeds.js';
 import { MAX_RANGE } from '../../references/parsing/reference-parser.js';
+import { DISCORD_LIMITS, splitText } from '../../../shared/discord-text.js';
+import { replyCapabilities } from '../../../bot/reply-capabilities.js';
 
 export function toIncoming(message: Message<true>): IncomingMessage {
   const ch = message.channel;
@@ -37,22 +39,15 @@ export function settingsToAuto(s: GuildSettings) {
   };
 }
 
+const warnedChannels = new Map<string, number>();
+
 /** Handler fino: converte, delega ao serviço e responde. Nunca altera a mensagem original. */
 export async function onMessageCreate(message: Message, ctx: AppContext): Promise<void> {
   if (!message.inGuild() || message.author.id === message.client.user.id) return;
-  const me = message.guild.members.me;
-  if (
-    !me ||
-    !message.channel
-      .permissionsFor(me)
-      ?.has([PermissionFlagsBits.SendMessages, PermissionFlagsBits.EmbedLinks])
-  )
-    return;
-  if (
-    message.channel.isThread() &&
-    !message.channel.permissionsFor(me)?.has(PermissionFlagsBits.SendMessagesInThreads)
-  )
-    return;
+  // Em servidores grandes o próprio membro do bot pode não estar em cache.
+  const me = message.guild.members.me ?? (await message.guild.members.fetchMe().catch(() => null));
+  const can = replyCapabilities(me ? message.channel.permissionsFor(me) : null, message.channel.isThread());
+  if (!can.send) return;
 
   const settings = await ctx.settings.get(message.guildId);
   const incoming = toIncoming(message);
@@ -73,9 +68,39 @@ export async function onMessageCreate(message: Message, ctx: AppContext): Promis
       }),
     ),
   ];
-  for (const batch of packEmbeds(embeds).slice(0, 3)) {
-    await message.reply({ embeds: batch, allowedMentions: { parse: [], repliedUser: false } });
+  if (embeds.length === 0) return;
+
+  if (!can.embeds || !can.reply) {
+    const now = Date.now();
+    if (now - (warnedChannels.get(message.channelId) ?? 0) > 60 * 60_000) {
+      warnedChannels.set(message.channelId, now);
+      ctx.logger.warn(
+        { guildId: message.guildId, channelId: message.channelId, embeds: can.embeds, reply: can.reply },
+        'Permissões limitadas no canal: respondendo em texto simples e/ou sem citar a mensagem',
+      );
+    }
   }
+  const payloads = can.embeds
+    ? packEmbeds(embeds).map((batch) => ({ embeds: batch }))
+    : embedsToText(embeds).map((content) => ({ content }));
+  for (const payload of payloads.slice(0, 3)) {
+    const options = { ...payload, allowedMentions: { parse: [], repliedUser: false } };
+    if (can.reply) await message.reply(options);
+    else await message.channel.send(options);
+  }
+}
+
+/** Sem "Inserir links" o Discord descarta embeds: converte para texto (blocos ≤ 2000). */
+export function embedsToText(embeds: EmbedBuilder[]): string[] {
+  const text = embeds
+    .map((e) => {
+      const d = e.data;
+      return [d.title ? `**${d.title}**` : '', d.description ?? '', d.footer ? `-# ${d.footer.text}` : '']
+        .filter(Boolean)
+        .join('\n');
+    })
+    .join('\n\n');
+  return splitText(text, DISCORD_LIMITS.messageContent);
 }
 
 function buildEmbeds(reply: AutoReply) {

@@ -38,6 +38,21 @@ export type AutoReply =
   | { kind: 'quotation'; passage: Passage; coverage: number };
 
 /**
+ * Regra de canais das respostas automáticas (o canal ou a sua categoria/canal pai):
+ * excluído ganha sempre; com lista de permitidos não vazia, só esses respondem.
+ */
+export function channelRule(
+  ids: Array<string | null | undefined>,
+  allowed: string[],
+  excluded: string[],
+): 'ok' | 'excluded' | 'not-allowed' {
+  const present = ids.filter((x): x is string => Boolean(x));
+  if (present.some((id) => excluded.includes(id))) return 'excluded';
+  if (allowed.length > 0 && !present.some((id) => allowed.includes(id))) return 'not-allowed';
+  return 'ok';
+}
+
+/**
  * Decide, de forma determinística, se uma mensagem comum deve receber resposta
  * com texto bíblico. Não conhece discord.js: recebe dados simples e devolve o
  * que enviar. Deduplica por ID de mensagem e aplica cooldown por canal.
@@ -75,10 +90,7 @@ export class AutoReferenceService {
   }
 
   private channelAllowed(msg: IncomingMessage, s: AutoReferenceSettings, channelList: string[]): boolean {
-    const ids = [msg.channelId, msg.parentChannelId].filter((x): x is string => Boolean(x));
-    if (ids.some((id) => s.excludedChannelIds.includes(id))) return false;
-    if (channelList.length === 0) return true;
-    return ids.some((id) => channelList.includes(id));
+    return channelRule([msg.channelId, msg.parentChannelId], channelList, s.excludedChannelIds) === 'ok';
   }
 
   async handle(msg: IncomingMessage, s: AutoReferenceSettings): Promise<AutoReply | null> {
