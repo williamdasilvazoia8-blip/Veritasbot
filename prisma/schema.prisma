@@ -220,3 +220,32 @@ model AuditLog {
 
   @@index([guildId, createdAt])
 }
+
+// Catecismo (ccc) e Código de Direito Canónico (cic): importados por
+// scripts/import-references.ts a partir das fontes oficiais; nunca versionados no Git.
+model ReferenceDocument {
+  id           String          @id
+  name         String
+  edition      String
+  source       String
+  sourceSha256 String
+  rightsStatus String
+  unitCount    Int
+  // Correções de numeração e avisos da extração.
+  report       Json
+  importedAt   DateTime        @default(now())
+  texts        ReferenceText[]
+}
+
+model ReferenceText {
+  documentId String
+  document   ReferenceDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  // Número do parágrafo (Catecismo) ou do cânon (Código).
+  number     Int
+  text       String
+  // Secção/título onde aparece.
+  context    String?
+  sourceUrl  String?
+
+  @@id([documentId, number])
+}

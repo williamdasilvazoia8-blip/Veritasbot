@@ -19,3 +19,14 @@ describe('loadEnv', () => {
     expect(() => loadEnv({ ...base, DEFAULT_TIMEZONE: 'Lua/Base' })).toThrow(/DEFAULT_TIMEZONE/);
   });
 });
+
+describe('REFERENCE_TEXTS_GUILD_IDS', () => {
+  it('vazio = todos; lista separada por vírgulas; rejeita IDs inválidos', () => {
+    expect(loadEnv(base).REFERENCE_TEXTS_GUILD_IDS).toEqual([]);
+    expect(
+      loadEnv({ ...base, REFERENCE_TEXTS_GUILD_IDS: '123456789012345678, 223456789012345678' })
+        .REFERENCE_TEXTS_GUILD_IDS,
+    ).toEqual(['123456789012345678', '223456789012345678']);
+    expect(() => loadEnv({ ...base, REFERENCE_TEXTS_GUILD_IDS: 'abc' })).toThrow(/REFERENCE_TEXTS_GUILD_IDS/);
+  });
+});

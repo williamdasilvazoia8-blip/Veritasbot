@@ -2,18 +2,19 @@
 
 Discord bot for Portuguese-speaking Roman Catholic communities.
 
-| Feature                                                                                                                                              | Status                                                                    |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| Automatic Bible references in ordinary messages (`João 3:16`, `1 Cor 13,4-7`, …) — Pe. Manuel de Matos Soares                                        | ✅ working (requires corpus import)                                       |
-| `/biblia passagem · buscar · livro · aleatorio · configuracao`                                                                                       | ✅                                                                        |
-| Pasted-quotation identification (n-gram matching)                                                                                                    | ✅ implemented, **off by default**                                        |
-| Daily liturgy — Liturgia Diária API **v2** (`/liturgia …`)                                                                                           | ✅ (v3 beta adapter behind `LITURGIA_V3_ENABLED`)                         |
-| Saints of the day — Liturgical Calendar API (LitCal) (`/calendario santos`)                                                                          | ✅ (Latin/English/Italian/French/Dutch names; no BR/PT calendar upstream) |
-| Scheduled daily post: readings (references / Gospel / all) + saints, for the real local date                                                         | ✅ `/agendar liturgia`                                                    |
-| Liturgical calendar: computus, seasons, weeks, A/B/C & I/II cycles (`/calendario …`)                                                                 | ✅ foundation; no precedence engine yet                                   |
-| Moderation: `/mute` (s, min, h, d, sem, mo, y), `/unmute`, `/mute-status`, `/kick`, `/ban`, `/unban`, `/purge`, `/modlogs`, `/configurar-silenciado` | ✅                                                                        |
-| Scheduled & recurring announcements `/agendar criar · listar · ver · editar · cancelar · pausar · retomar`                                           | ✅                                                                        |
-| 1962 calendar                                                                                                                                        | 📝 design only (`docs/calendar-roadmap.md`)                               |
+| Feature                                                                                                                                                  | Status                                                                    |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Automatic Bible references in ordinary messages (`João 3:16`, `1 Cor 13,4-7`, …) — Pe. Manuel de Matos Soares                                            | ✅ working (requires corpus import)                                       |
+| `/biblia passagem · buscar · livro · aleatorio · configuracao`                                                                                           | ✅                                                                        |
+| Catechism (`CCC 1234`, `/catecismo`) and Code of Canon Law (`cân. 1055`, `CDC 1055`, `/direito-canonico`) — auto-references, ranges up to 5, word search | ✅ (requires `npm run references:import`; personal use, see rights doc)   |
+| Pasted-quotation identification (n-gram matching)                                                                                                        | ✅ implemented, **off by default**                                        |
+| Daily liturgy — Liturgia Diária API **v2** (`/liturgia …`)                                                                                               | ✅ (v3 beta adapter behind `LITURGIA_V3_ENABLED`)                         |
+| Saints of the day — Liturgical Calendar API (LitCal) (`/calendario santos`)                                                                              | ✅ (Latin/English/Italian/French/Dutch names; no BR/PT calendar upstream) |
+| Scheduled daily post: readings (references / Gospel / all) + saints, for the real local date                                                             | ✅ `/agendar liturgia`                                                    |
+| Liturgical calendar: computus, seasons, weeks, A/B/C & I/II cycles (`/calendario …`)                                                                     | ✅ foundation; no precedence engine yet                                   |
+| Moderation: `/mute` (s, min, h, d, sem, mo, y), `/unmute`, `/mute-status`, `/kick`, `/ban`, `/unban`, `/purge`, `/modlogs`, `/configurar-silenciado`     | ✅                                                                        |
+| Scheduled & recurring announcements `/agendar criar · listar · ver · editar · cancelar · pausar · retomar`                                               | ✅                                                                        |
+| 1962 calendar                                                                                                                                            | 📝 design only (`docs/calendar-roadmap.md`)                               |
 
 ## 1. Discord application setup
 
@@ -39,6 +40,8 @@ npm run db:migrate
 git clone --depth 1 https://github.com/Dancrf/biblia-db /tmp/biblia-db
 npm run bible:import -- --source /tmp/biblia-db/biblia.json \
   --revision "$(git -C /tmp/biblia-db rev-parse HEAD)" --rights-status unverified
+# Catechism (vatican.va) + Code of Canon Law (CEP PDF): downloaded from the official sources, never committed
+npm run references:import
 npm run commands:register       # guild-scoped if DISCORD_GUILD_ID is set, global otherwise
 npm run dev                     # or: npm run build && npm start
 ```
@@ -52,6 +55,7 @@ npm run typecheck && npm run lint
 npm test                                                      # unit tests
 TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/veritas_test npm test   # + integration (throwaway DB!)
 BIBLE_SOURCE_PATH=/tmp/biblia-db/biblia.json TEST_DATABASE_URL=… npm test            # + real-corpus check
+CCC_SOURCE_DIR=<saved vatican.va pages> CIC_SOURCE_PDF=<CIC_SiteCEP.pdf> npm test   # + real Catechism/Code extraction
 npm run liturgy:smoke -- America/Sao_Paulo                    # live API check (network)
 ```
 
@@ -72,6 +76,8 @@ Run **exactly one** bot instance: a second one would answer every message twice.
 
 - `/config fuso fuso:Europe/Lisbon` — guild timezone (drives "hoje", schedules, `mo`/`y` mutes).
 - `/biblia configuracao` — auto-references on/off, channels, cooldown, Psalm numbering, quotation detection.
+  The same settings apply to Catechism/Code auto-references. Abbreviations: **CCC / CIC / Catecismo** → Catechism;
+  **CDC / cân. / cânon / can.** → Code of Canon Law. `REFERENCE_TEXTS_GUILD_IDS` limits both to listed servers.
 - `/liturgia configuracao calendario_romano:… idioma_calendario:…` — LitCal calendar and saint-name language.
 - `/agendar liturgia canal:#liturgia hora:07:00 leituras:gospel santos:true` — daily post with the summary,
   the Gospel text and the saints for that day's real local date (`vespera:true` posts tomorrow's in the evening).

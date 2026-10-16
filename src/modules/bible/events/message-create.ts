@@ -4,6 +4,8 @@ import { BIBLE_COLOR, passageEmbeds, packEmbeds } from '../../../bot/embeds/bibl
 import { formatCitation } from '../application/passage-formatter.js';
 import type { AutoReply, IncomingMessage } from '../application/auto-reference-service.js';
 import type { GuildSettings } from '../../guild-settings/settings-service.js';
+import { unitEmbeds } from '../../references/presentation/embeds.js';
+import { MAX_RANGE } from '../../references/parsing/reference-parser.js';
 
 export function toIncoming(message: Message<true>): IncomingMessage {
   const ch = message.channel;
@@ -53,11 +55,26 @@ export async function onMessageCreate(message: Message, ctx: AppContext): Promis
     return;
 
   const settings = await ctx.settings.get(message.guildId);
-  const reply = await ctx.autoReferences.handle(toIncoming(message), settingsToAuto(settings));
-  if (!reply) return;
-
-  for (const embeds of packEmbeds(buildEmbeds(reply)).slice(0, 3)) {
-    await message.reply({ embeds, allowedMentions: { parse: [], repliedUser: false } });
+  const incoming = toIncoming(message);
+  const auto = settingsToAuto(settings);
+  const reply = await ctx.autoReferences.handle(incoming, auto);
+  // Catecismo / Código ("CCC 1234", "cân. 1055"): mesmas regras de canal e cooldown.
+  const documents = ctx.documentReplies.handle(incoming, auto);
+  const embeds = [
+    ...(reply ? buildEmbeds(reply) : []),
+    ...documents.flatMap((d) =>
+      unitEmbeds(d.reference.documentId, d.units, {
+        missing: d.missing,
+        ...(d.reference.requestedEnd > d.reference.end
+          ? {
+              note: `Mostrando só os primeiros ${MAX_RANGE}; use /${d.reference.documentId === 'ccc' ? 'catecismo' : 'direito-canonico'} para o resto.`,
+            }
+          : {}),
+      }),
+    ),
+  ];
+  for (const batch of packEmbeds(embeds).slice(0, 3)) {
+    await message.reply({ embeds: batch, allowedMentions: { parse: [], repliedUser: false } });
   }
 }
 

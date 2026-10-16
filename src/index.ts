@@ -26,6 +26,10 @@ import { ScheduledMessageRenderer } from './modules/scheduling/application/rende
 import { routeInteraction } from './bot/interaction-router.js';
 import { LitcalClient } from './modules/calendar/providers/litcal/client.js';
 import { SaintsService } from './modules/calendar/application/saints-service.js';
+import { ReferenceLibrary } from './modules/references/application/reference-library.js';
+import { DocumentAutoReplyService } from './modules/references/application/document-auto-reply.js';
+import { loadDocuments } from './modules/references/persistence/reference-repository.js';
+import { referencesAllowed } from './modules/references/commands/reference-commands.js';
 import { startHealthServer } from './app/health.js';
 import type { AppContext } from './app/context.js';
 
@@ -66,6 +70,23 @@ async function main() {
     globalEnabled: env.BIBLE_AUTO_REFERENCES_ENABLED,
     quotationGloballyEnabled: env.BIBLE_QUOTATION_MATCHING_ENABLED,
     getQuotationMatcher: () => bible.getQuotationMatcher(),
+  });
+  const references = new ReferenceLibrary(
+    env.REFERENCE_TEXTS_ENABLED
+      ? await loadDocuments(prisma).catch((err) => {
+          logger.error({ err }, 'Falha ao carregar Catecismo/Código');
+          return [];
+        })
+      : [],
+  );
+  for (const id of ['ccc', 'cic'] as const) {
+    const doc = references.info(id);
+    if (doc) logger.info({ id, units: doc.units.length }, 'Documento de referência carregado');
+    else if (env.REFERENCE_TEXTS_ENABLED)
+      logger.warn({ id }, 'Documento de referência não importado (npm run references:import)');
+  }
+  const documentReplies = new DocumentAutoReplyService(references, {
+    isGuildAllowed: (guildId) => referencesAllowed({ env }, guildId),
   });
   const http = {
     baseUrl: env.LITURGIA_API_BASE_URL,
@@ -120,6 +141,8 @@ async function main() {
     audit,
     bible,
     autoReferences,
+    references,
+    documentReplies,
     liturgy,
     saints,
     mutes,

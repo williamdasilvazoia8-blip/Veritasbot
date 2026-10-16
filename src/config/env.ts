@@ -35,6 +35,19 @@ export const envSchema = z.object({
   BIBLE_EDITION_ID: z.string().min(1).default('matos-soares-1956'),
   BIBLE_AUTO_REFERENCES_ENABLED: boolFromString.default(true),
   BIBLE_QUOTATION_MATCHING_ENABLED: boolFromString.default(false),
+  /** Catecismo e Código de Direito Canónico (/catecismo, /direito-canonico, "CCC 1234"). */
+  REFERENCE_TEXTS_ENABLED: boolFromString.default(true),
+  /** IDs de servidores separados por vírgula; vazio = todos os servidores. */
+  REFERENCE_TEXTS_GUILD_IDS: z
+    .string()
+    .default('')
+    .transform((v) =>
+      v
+        .split(',')
+        .map((x) => x.trim())
+        .filter(Boolean),
+    )
+    .pipe(z.array(z.string().regex(/^\d{17,20}$/, 'ID de servidor inválido'))),
   /** Atraso máximo (minutos) para entregar um agendamento perdido durante indisponibilidade. */
   SCHEDULE_MISSED_GRACE_MINUTES: z.coerce.number().int().min(0).default(360),
 });

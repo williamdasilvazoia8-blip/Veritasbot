@@ -3,6 +3,8 @@ import { onMessageCreate } from '../../../src/modules/bible/events/message-creat
 import { AutoReferenceService } from '../../../src/modules/bible/application/auto-reference-service.js';
 import { syntheticProvider } from '../../fixtures/bible/synthetic.js';
 import type { AppContext } from '../../../src/app/context.js';
+import { ReferenceLibrary } from '../../../src/modules/references/application/reference-library.js';
+import { DocumentAutoReplyService } from '../../../src/modules/references/application/document-auto-reply.js';
 
 function fakeMessage(content: string, over: Record<string, unknown> = {}) {
   const reply = vi.fn(async () => ({}));
@@ -49,6 +51,19 @@ const ctx = () =>
       globalEnabled: true,
       quotationGloballyEnabled: false,
     }),
+    documentReplies: new DocumentAutoReplyService(
+      new ReferenceLibrary([
+        {
+          id: 'cic',
+          edition: 'teste',
+          importedAt: new Date(0),
+          units: [
+            { documentId: 'cic', number: 1055, text: 'Texto sintético.', context: null, sourceUrl: null },
+          ],
+        },
+      ]),
+      { isGuildAllowed: () => true },
+    ),
   }) as unknown as AppContext;
 
 describe('onMessageCreate (handler do Discord)', () => {
@@ -66,6 +81,17 @@ describe('onMessageCreate (handler do Discord)', () => {
     expect(payload.embeds[0]!.data.footer.text).toContain('SINTÉTICO');
     expect(edit).not.toHaveBeenCalled();
     expect(del).not.toHaveBeenCalled();
+  });
+
+  it('"cân. 1055" responde com o cânon, junto com a Bíblia na mesma mensagem', async () => {
+    const { msg, reply } = fakeMessage('João 3:16 e cân. 1055');
+    await onMessageCreate(msg as never, ctx());
+    expect(reply).toHaveBeenCalledTimes(1);
+    const payload = (reply.mock.calls[0] as unknown as [{ embeds: Array<{ data: { title: string } }> }])[0];
+    expect(payload.embeds.map((e) => e.data.title)).toEqual([
+      'João 3,16',
+      'Código de Direito Canónico, cân. 1055',
+    ]);
   });
 
   it('ignora mensagens de bots e do próprio bot', async () => {

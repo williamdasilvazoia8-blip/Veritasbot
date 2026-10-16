@@ -64,6 +64,20 @@ exit
 heroku ps:restart worker -a <app>
 ```
 
+### Catechism and Code of Canon Law (one-time, ~1 minute)
+
+Downloads the Catechism from vatican.va and the Code of Canon Law PDF from the CEP site, checks that
+every paragraph/canon is present, and stores them in Postgres:
+
+```bash
+heroku run node dist/scripts/import-references.js -a <app>
+heroku ps:restart worker -a <app>
+```
+
+(Dashboard: **More → Run console** → `node dist/scripts/import-references.js`.) Expected:
+`ccc: 2865 unidades`, `cic: 1752 unidades`, `gravado`. After restarting, the log shows
+`Documento de referência carregado` twice.
+
 Slash commands are registered automatically by the `release` phase on every deploy (the release
 log shows `N comando(s) registrado(s)`). Global commands can take a few minutes to appear; press
 Ctrl+R in Discord. To register by hand: `heroku run node dist/scripts/register-commands.js -a <app>`.

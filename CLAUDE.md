@@ -10,6 +10,7 @@ Engineering text in English; everything users see on Discord in Portuguese (pt-B
 - Optional real-corpus test: `BIBLE_SOURCE_PATH=data/bible/biblia.json`.
 - `npm run db:migrate` (deploy) / `npm run db:migrate:dev -- --name x` (new migration)
 - `npm run bible:import -- --source <biblia.json> --revision <sha> --rights-status unverified`
+- `npm run references:import [-- --document ccc|cic] [--ccc-dir … --cic-pdf …] [--dry-run]` — Catechism (vatican.va) + Code of Canon Law (CEP PDF).
 - `npm run commands:register` after changing any slash-command definition.
 - `npm run liturgy:smoke` — live check of external APIs (network required; not part of CI).
 
@@ -34,4 +35,5 @@ that don't import discord.js (tests use fakes: `InMemoryJobScheduler`, fake gate
 - `mo`/`y` durations and monthly/yearly schedules are calendar arithmetic in an IANA zone (Luxon), never 30/365 days.
 - Postgres is the source of truth for schedules/mutes; BullMQ job IDs are deterministic; handlers re-validate DB state. Use `safeJobId` (no `:`).
 - Scheduled delivery is effectively-once: unique (schedule, occurrenceKey) + `partsSent` + Discord nonce per part.
+- Catechism/Code text: only from `ReferenceText` (imported from vatican.va / the CEP PDF), never committed; on demand only (≤ 5 units), always with edition + rights footer and official link. CCC/CIC = Catecismo; CDC/cân. = Código.
 - 1962 calendar is a separate provider; never mix with ordinary-form rules or the Dancrf API.
