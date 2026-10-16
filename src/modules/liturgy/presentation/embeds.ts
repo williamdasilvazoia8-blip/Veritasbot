@@ -1,4 +1,5 @@
-import { EmbedBuilder } from 'discord.js';
+import { EmbedBuilder, type APIEmbed } from 'discord.js';
+import { packEmbedJson } from '../../../shared/embed-pack.js';
 import { DISCORD_LIMITS, escapeDiscord, splitText, truncate } from '../../../shared/discord-text.js';
 import { formatLongDate } from '../../../shared/dates.js';
 import {
@@ -177,4 +178,23 @@ export function calendarDayEmbed(
     text: `Tempo/ciclos: cálculo próprio (sem precedência nem calendários nacionais). Celebração: ${LITURGY_ATTRIBUTION}`,
   });
   return e;
+}
+
+/** Máximo de mensagens para "todas as leituras" (a Vigília Pascal tem muitas). */
+export const MAX_READING_MESSAGES = 6;
+
+/**
+ * Textos de TODAS as leituras da celebração, agrupados em mensagens que respeitam
+ * os limites do Discord (10 embeds e 6000 caracteres por mensagem).
+ */
+export function allReadingsMessages(
+  day: LiturgicalDay,
+  celebration: LiturgicalCelebration,
+  maxMessages = MAX_READING_MESSAGES,
+): { messages: APIEmbed[][]; truncated: boolean } {
+  const embeds = celebration.readings.flatMap((r) =>
+    readingTextEmbeds(day, celebration, r).map((e) => e.toJSON()),
+  );
+  const packed = packEmbedJson(embeds);
+  return { messages: packed.slice(0, maxMessages), truncated: packed.length > maxMessages };
 }

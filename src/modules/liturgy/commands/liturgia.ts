@@ -10,7 +10,12 @@ import type { AppContext } from '../../../app/context.js';
 import { requireMemberPermission } from '../../../bot/guards.js';
 import { localDate, parseBrDate } from '../../../shared/dates.js';
 import { describeLiturgyFailure } from '../application/liturgy-service.js';
-import { liturgyDayEmbed, prayersEmbed, readingTextEmbeds } from '../presentation/embeds.js';
+import {
+  allReadingsMessages,
+  liturgyDayEmbed,
+  prayersEmbed,
+  readingTextEmbeds,
+} from '../presentation/embeds.js';
 import { primaryCelebration, type LiturgyLocale } from '../domain/types.js';
 import { describeDay } from '../../calendar/rules/general-roman-calendar.js';
 import { LITCAL_CALENDARS, LITCAL_LOCALES } from '../../calendar/providers/litcal/client.js';
@@ -35,12 +40,12 @@ const data = new SlashCommandBuilder()
   .addSubcommand((s) =>
     s
       .setName('leituras')
-      .setDescription('Referências das leituras ou o texto de uma delas')
+      .setDescription('Texto de todas as leituras do dia (ou só de uma, com numero)')
       .addStringOption(dateOpt(false))
       .addIntegerOption((o) =>
         o
           .setName('numero')
-          .setDescription('Número da leitura na sequência (1 = primeira) para ver o texto')
+          .setDescription('Só uma leitura: 1 = primeira, 2 = salmo, 3 = segunda ou Evangelho…')
           .setMinValue(1)
           .setMaxValue(20),
       ),
@@ -124,10 +129,22 @@ export const liturgiaCommand: SlashCommand = {
     if (sub === 'leituras') {
       const n = interaction.options.getInteger('numero');
       if (n === null) {
-        await interaction.editReply({
-          embeds: [liturgyDayEmbed(day, describeDay(isoDate))],
-          allowedMentions,
-        });
+        // Sem número: envia o texto de todas as leituras do dia, em várias mensagens se preciso.
+        const { messages, truncated } = allReadingsMessages(day, celebration);
+        if (messages.length === 0) {
+          await interaction.editReply({ content: 'O provedor não informou leituras para esta data.' });
+          return;
+        }
+        const [first, ...rest] = messages;
+        await interaction.editReply({ embeds: first!, allowedMentions });
+        for (const embeds of rest) await interaction.followUp({ embeds, allowedMentions });
+        if (truncated) {
+          await interaction.followUp({
+            content:
+              'Algumas leituras foram omitidas para não inundar o canal. Use `/liturgia leituras numero:` para ver uma leitura específica.',
+            allowedMentions,
+          });
+        }
         return;
       }
       const reading = celebration.readings[n - 1];
