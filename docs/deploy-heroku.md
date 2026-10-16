@@ -7,7 +7,7 @@ sleep after 30 minutes without web traffic, which takes the bot offline).
 The repository's `Procfile` defines:
 
 ```
-release: npx prisma migrate deploy     # runs on every deploy: creates/updates the tables
+release: npx prisma migrate deploy && node dist/scripts/register-commands.js   # every deploy: tables + slash commands
 worker: node dist/src/index.js         # the bot
 ```
 
@@ -52,7 +52,7 @@ After the first deploy that includes the `Procfile`: turn **web off** and **work
 heroku ps:scale web=0 worker=1 -a <app>
 ```
 
-## 4. One-time setup: Bible import and slash commands
+## 4. One-time setup: Bible import
 
 ```bash
 heroku run bash -a <app>
@@ -60,13 +60,13 @@ curl -fsSL -o /tmp/biblia.json \
   https://raw.githubusercontent.com/Dancrf/biblia-db/c5feefffc2d940efa7b11c49445c52ea1426d6a4/biblia.json
 node dist/scripts/import-bible.js --source /tmp/biblia.json \
   --revision c5feefffc2d940efa7b11c49445c52ea1426d6a4 --rights-status unverified
-node dist/scripts/register-commands.js
 exit
 heroku ps:restart worker -a <app>
 ```
 
-Commands registered globally can take a few minutes to appear; set `DISCORD_GUILD_ID` before running
-`register-commands.js` to register them instantly in one server.
+Slash commands are registered automatically by the `release` phase on every deploy (the release
+log shows `N comando(s) registrado(s)`). Global commands can take a few minutes to appear; press
+Ctrl+R in Discord. To register by hand: `heroku run node dist/scripts/register-commands.js -a <app>`.
 
 ## 5. Check
 
