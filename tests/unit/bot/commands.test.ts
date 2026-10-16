@@ -38,4 +38,20 @@ describe('definições de comandos', () => {
       expect.arrayContaining(['leituras', 'santos', 'memorias_facultativas', 'vespera']),
     );
   });
+
+  it('/liturgia leituras não pede número da leitura (envia todas)', () => {
+    const liturgia = commands.find((c) => c.data.name === 'liturgia')!;
+    const sub = liturgia.data.options!.find((o) => o.name === 'leituras') as {
+      options?: Array<{ name: string }>;
+    };
+    expect((sub.options ?? []).map((o) => o.name)).toEqual(['dia']);
+  });
+
+  it('/agendar liturgia oferece "todas as leituras" como primeira opção', () => {
+    const agendar = commands.find((c) => c.data.name === 'agendar')!;
+    const sub = agendar.data.options!.find((o) => o.name === 'liturgia') as {
+      options: Array<{ name: string; choices?: Array<{ value: string }> }>;
+    };
+    expect(sub.options.find((o) => o.name === 'leituras')!.choices![0]!.value).toBe('full');
+  });
 });

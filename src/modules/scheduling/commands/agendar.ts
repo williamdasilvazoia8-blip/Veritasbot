@@ -108,11 +108,11 @@ const data = new SlashCommandBuilder()
       .addStringOption((o) =>
         o
           .setName('leituras')
-          .setDescription('Quanto das leituras publicar (padrão: resumo com referências)')
+          .setDescription('Quanto das leituras publicar (padrão: todas as leituras)')
           .addChoices(
-            { name: 'Resumo e referências', value: 'references' },
-            { name: 'Resumo + texto do Evangelho', value: 'gospel' },
-            { name: 'Resumo + todas as leituras', value: 'full' },
+            { name: 'Todas as leituras (texto completo)', value: 'full' },
+            { name: 'Só o Evangelho (texto completo)', value: 'gospel' },
+            { name: 'Só o resumo com as referências', value: 'references' },
             { name: 'Nenhuma (só santos)', value: 'none' },
           ),
       )
@@ -154,9 +154,9 @@ const data = new SlashCommandBuilder()
           .setName('leituras')
           .setDescription('(Liturgia) Quanto das leituras publicar')
           .addChoices(
-            { name: 'Resumo e referências', value: 'references' },
-            { name: 'Resumo + texto do Evangelho', value: 'gospel' },
-            { name: 'Resumo + todas as leituras', value: 'full' },
+            { name: 'Todas as leituras (texto completo)', value: 'full' },
+            { name: 'Só o Evangelho (texto completo)', value: 'gospel' },
+            { name: 'Só o resumo com as referências', value: 'references' },
             { name: 'Nenhuma (só santos)', value: 'none' },
           ),
       )
@@ -307,7 +307,7 @@ export const agendarCommand: SlashCommand = {
       } else {
         const payload = liturgyPayloadSchema.parse({
           offsetDays: o.getBoolean('vespera') ? 1 : 0,
-          readings: o.getString('leituras') ?? 'references',
+          readings: o.getString('leituras') ?? 'full',
           saints: o.getBoolean('santos') ?? true,
           optionalMemorials: o.getBoolean('memorias_facultativas') ?? true,
         });

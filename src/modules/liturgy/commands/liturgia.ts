@@ -38,17 +38,7 @@ const data = new SlashCommandBuilder()
     s.setName('data').setDescription('Liturgia de uma data').addStringOption(dateOpt(true)),
   )
   .addSubcommand((s) =>
-    s
-      .setName('leituras')
-      .setDescription('Texto de todas as leituras do dia (ou só de uma, com numero)')
-      .addStringOption(dateOpt(false))
-      .addIntegerOption((o) =>
-        o
-          .setName('numero')
-          .setDescription('Só uma leitura: 1 = primeira, 2 = salmo, 3 = segunda ou Evangelho…')
-          .setMinValue(1)
-          .setMaxValue(20),
-      ),
+    s.setName('leituras').setDescription('Texto de todas as leituras do dia').addStringOption(dateOpt(false)),
   )
   .addSubcommand((s) =>
     s.setName('evangelho').setDescription('Texto do Evangelho do dia').addStringOption(dateOpt(false)),
@@ -127,34 +117,22 @@ export const liturgiaCommand: SlashCommand = {
       return;
     }
     if (sub === 'leituras') {
-      const n = interaction.options.getInteger('numero');
-      if (n === null) {
-        // Sem número: envia o texto de todas as leituras do dia, em várias mensagens se preciso.
-        const { messages, truncated } = allReadingsMessages(day, celebration);
-        if (messages.length === 0) {
-          await interaction.editReply({ content: 'O provedor não informou leituras para esta data.' });
-          return;
-        }
-        const [first, ...rest] = messages;
-        await interaction.editReply({ embeds: first!, allowedMentions });
-        for (const embeds of rest) await interaction.followUp({ embeds, allowedMentions });
-        if (truncated) {
-          await interaction.followUp({
-            content:
-              'Algumas leituras foram omitidas para não inundar o canal. Use `/liturgia leituras numero:` para ver uma leitura específica.',
-            allowedMentions,
-          });
-        }
+      // Texto de todas as leituras do dia, em várias mensagens se preciso.
+      const { messages, truncated } = allReadingsMessages(day, celebration);
+      if (messages.length === 0) {
+        await interaction.editReply({ content: 'O provedor não informou leituras para esta data.' });
         return;
       }
-      const reading = celebration.readings[n - 1];
-      if (!reading) {
-        await interaction.editReply({
-          content: `Este dia tem ${celebration.readings.length} leitura(s) no provedor.`,
+      const [first, ...rest] = messages;
+      await interaction.editReply({ embeds: first!, allowedMentions });
+      for (const embeds of rest) await interaction.followUp({ embeds, allowedMentions });
+      if (truncated) {
+        await interaction.followUp({
+          content:
+            'Algumas leituras foram omitidas por limite de tamanho do Discord. O Evangelho completo: `/liturgia evangelho`.',
+          allowedMentions,
         });
-        return;
       }
-      await interaction.editReply({ embeds: readingTextEmbeds(day, celebration, reading), allowedMentions });
       return;
     }
     if (sub === 'evangelho') {
