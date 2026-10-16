@@ -26,6 +26,7 @@ import { ScheduledMessageRenderer } from './modules/scheduling/application/rende
 import { routeInteraction } from './bot/interaction-router.js';
 import { LitcalClient } from './modules/calendar/providers/litcal/client.js';
 import { SaintsService } from './modules/calendar/application/saints-service.js';
+import { LiturgyEquivalenceService } from './modules/liturgy/equivalence/equivalence-service.js';
 import { ReferenceLibrary } from './modules/references/application/reference-library.js';
 import { DocumentAutoReplyService } from './modules/references/application/document-auto-reply.js';
 import { loadDocuments } from './modules/references/persistence/reference-repository.js';
@@ -95,6 +96,13 @@ async function main() {
     onRetry: (info: { attempt: number; delayMs: number; reason: string }) =>
       logger.info(info, 'Nova tentativa na API de liturgia'),
   };
+  const litcal = env.LITCAL_ENABLED
+    ? new LitcalClient({
+        baseUrl: env.LITCAL_API_BASE_URL,
+        timeoutMs: env.LITCAL_TIMEOUT_MS,
+        maxBytes: env.LITCAL_MAX_RESPONSE_BYTES,
+      })
+    : null;
   const liturgy = new LiturgyService({
     providers: {
       v2: new LiturgiaDiariaV2Client(http),
@@ -104,17 +112,10 @@ async function main() {
     v3Enabled: env.LITURGIA_V3_ENABLED,
     prisma,
     logger,
+    // Datas fora dos anos do Liturgia Diária: textos da data equivalente (precisa do LitCal).
+    ...(litcal ? { equivalence: new LiturgyEquivalenceService(litcal, { logger }) } : {}),
   });
-  const saints = env.LITCAL_ENABLED
-    ? new SaintsService(
-        new LitcalClient({
-          baseUrl: env.LITCAL_API_BASE_URL,
-          timeoutMs: env.LITCAL_TIMEOUT_MS,
-          maxBytes: env.LITCAL_MAX_RESPONSE_BYTES,
-        }),
-        { logger },
-      )
-    : null;
+  const saints = litcal ? new SaintsService(litcal, { logger }) : null;
   const modLog = new ModLogService(client, settings, logger);
   const mutes = new MuteService(prisma, new DiscordMuteGateway(client), jobs, logger);
   const schedules = new ScheduleService(prisma, jobs, audit);

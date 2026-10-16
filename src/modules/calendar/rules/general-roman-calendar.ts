@@ -160,7 +160,9 @@ export function describeDay(isoDate: string, opts: CalendarOptions = {}): DayInf
     description = 'Tempo do Natal';
   } else if (date < cur.ashWednesday) {
     season = 'ordinary';
-    week = Math.floor(days(date, cur.baptism) / 7) + 1;
+    // Conta a partir do domingo do Batismo (ou do anterior, quando o Batismo é segunda-feira).
+    const baptismSunday = cur.baptism.minus({ days: cur.baptism.weekday % 7 });
+    week = Math.floor(days(date, baptismSunday) / 7) + 1;
     description = dayLabel(week, 'do Tempo Comum');
   } else if (date < cur.holyThursday) {
     season = 'lent';

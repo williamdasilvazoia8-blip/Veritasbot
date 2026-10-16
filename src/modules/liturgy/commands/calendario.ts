@@ -8,6 +8,7 @@ import { truncate } from '../../../shared/discord-text.js';
 import { calendarProviderFor } from '../../calendar/providers/calendar-provider.js';
 import { describeLiturgyFailure, type LiturgyResult } from '../application/liturgy-service.js';
 import { calendarDayEmbed, colorFor, LITURGY_FOOTER } from '../presentation/embeds.js';
+import { isBefore1970, PRE_1970_MESSAGE } from '../../calendar/rules/pre-1970.js';
 import { primaryCelebration, type LiturgyLocale } from '../domain/types.js';
 
 const data = new SlashCommandBuilder()
@@ -147,6 +148,10 @@ export const calendarioCommand: SlashCommand = {
         content: 'Data inválida. Use DD/MM/AAAA (semana) ou MM/AAAA (mês).',
         flags: MessageFlags.Ephemeral,
       });
+      return;
+    }
+    if (isBefore1970(start)) {
+      await interaction.reply({ content: PRE_1970_MESSAGE, flags: MessageFlags.Ephemeral });
       return;
     }
     await interaction.deferReply();

@@ -6,6 +6,7 @@ import { describeDay } from '../../calendar/rules/general-roman-calendar.js';
 import type { SaintsResult } from '../../calendar/application/saints-service.js';
 import { describeLiturgyFailure, type LiturgyResult } from '../application/liturgy-service.js';
 import { primaryCelebration } from '../domain/types.js';
+import { PRE_1970_MESSAGE } from '../../calendar/rules/pre-1970.js';
 import { liturgyDayEmbed, readingTextEmbeds } from './embeds.js';
 import type { OutgoingMessage } from '../../scheduling/application/types.js';
 
@@ -35,7 +36,9 @@ export function saintsEmbed(result: SaintsResult): APIEmbed {
     return {
       title: 'Santos do dia',
       description:
-        'O Calendário Romano (LitCal) está indisponível no momento; nenhum santo foi listado para evitar informação incorreta.',
+        result.reason === 'before-1970'
+          ? PRE_1970_MESSAGE
+          : 'O Calendário Romano (LitCal) está indisponível no momento; nenhum santo foi listado para evitar informação incorreta.',
       color: 0x8b6f3a,
     };
   }

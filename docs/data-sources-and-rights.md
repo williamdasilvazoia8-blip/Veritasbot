@@ -48,6 +48,20 @@ This document records what was verified and what was **not**. It is not legal ad
 - It is a community service, not an official Vatican/CNBB endpoint; availability is not guaranteed
   (it did not resolve from the build environment on 2026-10-16).
 
+### Dates outside the provider's coverage (equivalent dates)
+
+- The Liturgia Diária service only has 2024-01-01 to 2027-12-31 (verified 2026-10-16; 3–5 June 2024 are also missing).
+- For other dates from 1970 on, `src/modules/liturgy/equivalence/` computes the day's identity in the Brazilian
+  calendar (temporal cycle incl. movable feasts; LitCal sanctoral with `epiphany=SUNDAY_JAN2_JAN8&ascension=SUNDAY`;
+  Brazilian transfers of Peter & Paul, Assumption, All Saints; Aparecida; Brazilian/Latin-American ranks and proper
+  memorials) plus the A/B/C and I/II cycles, and shows the provider's text for a 2024–2027 date with the same
+  identity. Nothing is composed; every reply states the source date (`day.equivalent`).
+- Validation against the provider itself (scripts kept outside the repo): among 2024–2027 dates sharing a key, 97.4%
+  have the same readings; the rest are inconsistencies in the provider's data (e.g. Year I readings in a Year II year).
+  On 14 sample years (1970–2100), 97–100% of days have an equivalent; the others (some Ordinary Time Sundays/weeks in
+  a given cycle never occur in 2024–2027) are reported as unavailable.
+- Before 1970 the previous calendar and lectionary applied; the bot says so and does not apply current rules.
+
 ## LitCal
 
 - Apache-2.0. Attribution shown in every saints embed. Test fixture `tests/fixtures/litcal/general-2024-excerpt.json`

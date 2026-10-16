@@ -1,4 +1,5 @@
 import type { Logger } from '../../../shared/logger.js';
+import { isBefore1970, PRE_1970_MESSAGE } from '../rules/pre-1970.js';
 import { TtlCache } from '../../liturgy/application/liturgy-cache.js';
 import { LiturgyProviderError } from '../../liturgy/providers/liturgia-diaria/http.js';
 import type { LitcalCalendarId, LitcalClient, LitcalLocale } from '../providers/litcal/client.js';
@@ -21,7 +22,7 @@ export type SaintsResult =
       locale: LitcalLocale;
       celebrations: DayCelebration[];
     }
-  | { status: 'error'; date: string; message: string };
+  | { status: 'error'; date: string; message: string; reason?: 'before-1970' };
 
 export const GRADE = {
   WEEKDAY: 0,
@@ -57,6 +58,8 @@ export class SaintsService {
     opts: { includeOptional?: boolean; includeWeekdays?: boolean } = {},
   ): Promise<SaintsResult> {
     const [y, m, d] = isoDate.split('-').map(Number) as [number, number, number];
+    if (isBefore1970(isoDate))
+      return { status: 'error', date: isoDate, message: PRE_1970_MESSAGE, reason: 'before-1970' };
     try {
       const events = await this.year(y, calendar, locale);
       const celebrations = events

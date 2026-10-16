@@ -30,11 +30,13 @@ export class LitcalClient {
     calendar: LitcalCalendarId,
     locale: LitcalLocale,
     signal?: AbortSignal,
+    /** Parâmetros do LitCal, ex.: { epiphany: 'SUNDAY_JAN2_JAN8', ascension: 'SUNDAY' }. */
+    settings: Record<string, string> = {},
   ): Promise<LitcalEvent[]> {
     const base = this.opts.baseUrl.replace(/\/+$/, '');
     const path = calendar === 'GENERAL' ? `/calendar/${year}` : `/calendar/nation/${calendar}/${year}`;
     const res = await getJson(
-      `${base}${path}?year_type=CIVIL`,
+      `${base}${path}?${new URLSearchParams({ year_type: 'CIVIL', ...settings })}`,
       { ...this.opts, headers: { ...this.opts.headers, 'accept-language': locale } },
       signal,
     );

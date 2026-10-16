@@ -19,6 +19,8 @@ export const litcalEventSchema = z.object({
   month: z.number().int().min(1).max(12),
   day: z.number().int().min(1).max(31),
   is_vigil_mass: z.boolean().optional(),
+  /** 'fixed' (santoral, data fixa) ou 'mobile' (ciclo temporal). */
+  type: z.string().optional(),
   liturgical_season: z.string().optional(),
   liturgical_season_lcl: z.string().optional(),
   holy_day_of_obligation: z.boolean().optional(),

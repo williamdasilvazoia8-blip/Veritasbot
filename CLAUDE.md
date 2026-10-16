@@ -36,4 +36,5 @@ that don't import discord.js (tests use fakes: `InMemoryJobScheduler`, fake gate
 - Postgres is the source of truth for schedules/mutes; BullMQ job IDs are deterministic; handlers re-validate DB state. Use `safeJobId` (no `:`).
 - Scheduled delivery is effectively-once: unique (schedule, occurrenceKey) + `partsSent` + Discord nonce per part.
 - Catechism/Code text: only from `ReferenceText` (imported from vatican.va / the CEP PDF), never committed; on demand only (≤ 5 units), always with edition + rights footer and official link. CCC/CIC = Catecismo; CDC/cân. = Código.
+- Dates the Liturgia Diária API lacks (it covers 2024–2027) are served from an EQUIVALENT date (same Brazilian celebration + A/B/C + I/II cycles, `src/modules/liturgy/equivalence/`), always labelled via `day.equivalent`; no equivalent → say so. Before 1970 → `PRE_1970_MESSAGE` (traditional calendar not implemented), never apply ordinary-form rules.
 - 1962 calendar is a separate provider; never mix with ordinary-form rules or the Dancrf API.

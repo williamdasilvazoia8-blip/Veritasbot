@@ -1,4 +1,5 @@
 import { describeDay, type DayInfo } from '../rules/general-roman-calendar.js';
+import { isBefore1970, PRE_1970_MESSAGE } from '../rules/pre-1970.js';
 
 export type CalendarVariant = 'general-roman-of' | 'roman-1962';
 
@@ -15,6 +16,7 @@ export class GeneralRomanCalendarProvider implements CalendarProvider {
   readonly variant = 'general-roman-of' as const;
   readonly label = 'Calendário Romano Geral (forma ordinária)';
   describe(isoDate: string): CalendarResult {
+    if (isBefore1970(isoDate)) return { supported: false, reason: PRE_1970_MESSAGE };
     return { supported: true, day: describeDay(isoDate) };
   }
 }

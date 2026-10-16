@@ -154,6 +154,15 @@ export const HELP_CATEGORIES: HelpCategory[] = [
     commands: ['liturgia', 'calendario'],
     fields: [
       {
+        name: '📆 Qualquer ano a partir de 1970',
+        value:
+          'O serviço Liturgia Diária só tem **2024 a 2027**. Para outras datas o bot calcula a celebração do dia ' +
+          '(datas móveis como Páscoa, Ascensão, Pentecostes e Corpus Christi, santos, transferências do Brasil) e os ' +
+          'ciclos **A/B/C** e **I/II**, e mostra os textos do serviço para uma data com a **mesma celebração e ciclo** ' +
+          '— sempre avisando de que data vêm. Alguns domingos e semanas do Tempo Comum não têm equivalente nesses ' +
+          'anos; aí o bot diz que não há. Antes de 1970 vigorava o calendário tradicional (em implementação).',
+      },
+      {
         name: '`/liturgia hoje` · `amanha` · `data dia:`',
         value:
           'Resumo do dia: celebração, cor litúrgica, tempo e referências das leituras ' +

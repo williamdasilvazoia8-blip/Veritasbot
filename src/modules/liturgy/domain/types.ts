@@ -39,12 +39,26 @@ export interface LiturgicalCelebration {
   readings: Reading[];
 }
 
+/**
+ * O serviço não tem a data pedida: os textos vêm de outra data do serviço com a MESMA
+ * celebração e os mesmos ciclos (ver equivalence/). Sempre indicado ao utilizador.
+ */
+export interface EquivalentSource {
+  /** Data do Liturgia Diária de onde vêm as leituras. */
+  readingsDate: string;
+  /** Data de onde vêm título, cor e orações; null = título calculado e orações omitidas. */
+  celebrationDate: string | null;
+  /** false = não havia data do mesmo ciclo; usou-se a regra geral (pode diferir em detalhes). */
+  exact: boolean;
+}
+
 export interface LiturgicalDay {
   /** Data civil local, ISO YYYY-MM-DD. */
   date: string;
   source: 'dancrf-liturgia-diaria';
   sourceVersion: LiturgyApiVersion;
   celebrations: LiturgicalCelebration[];
+  equivalent?: EquivalentSource;
 }
 
 export interface LiturgyProvider {

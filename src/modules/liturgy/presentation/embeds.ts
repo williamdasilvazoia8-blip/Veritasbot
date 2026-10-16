@@ -24,6 +24,33 @@ const COLOR_HEX: Record<string, number> = {
 
 export const LITURGY_FOOTER = `${LITURGY_ATTRIBUTION} — textos do provedor, não da tradução Matos Soares`;
 
+const brDate = (iso: string) => iso.split('-').reverse().join('/');
+
+/**
+ * Aviso quando o serviço não tem a data pedida e os textos vêm de uma data equivalente
+ * (mesma celebração e ciclos A/B/C e I/II). Nunca se apresenta isso como texto "do dia".
+ */
+export function equivalenceNote(day: LiturgicalDay): string | null {
+  const eq = day.equivalent;
+  if (!eq) return null;
+  const parts = [
+    `O Liturgia Diária não tem esta data. Leituras do serviço para **${brDate(eq.readingsDate)}**, ` +
+      (eq.exact
+        ? 'com a mesma celebração e os mesmos ciclos.'
+        : 'com a mesma celebração; não havia uma data com exatamente o mesmo ciclo/dia, por isso algum detalhe pode diferir.'),
+  ];
+  if (eq.celebrationDate && eq.celebrationDate !== eq.readingsDate)
+    parts.push(`Título, cor e orações de ${brDate(eq.celebrationDate)}.`);
+  if (!eq.celebrationDate) parts.push('Título calculado pelo bot; orações próprias indisponíveis.');
+  return `⚠️ ${parts.join(' ')}`;
+}
+
+export function liturgyFooter(day: LiturgicalDay): string {
+  return day.equivalent
+    ? `${LITURGY_FOOTER} · textos de ${brDate(day.equivalent.readingsDate)} (data equivalente)`
+    : LITURGY_FOOTER;
+}
+
 export function colorFor(color: string | null | undefined): number {
   return COLOR_HEX[(color ?? '').toLowerCase()] ?? 0x8b6f3a;
 }
@@ -58,7 +85,7 @@ export function liturgyDayEmbed(day: LiturgicalDay, calendar?: DayInfo): EmbedBu
     .setColor(colorFor(c.color))
     .setTitle(truncate(c.name, DISCORD_LIMITS.embedTitle))
     .setURL(LITURGY_SOURCE_URL)
-    .setDescription(`📅 ${formatLongDate(day.date)}`)
+    .setDescription([`📅 ${formatLongDate(day.date)}`, equivalenceNote(day)].filter(Boolean).join('\n\n'))
     .addFields(
       { name: 'Cor litúrgica', value: colorDot(c.color), inline: true },
       ...(calendar
@@ -82,7 +109,7 @@ export function liturgyDayEmbed(day: LiturgicalDay, calendar?: DayInfo): EmbedBu
       ),
     });
   }
-  embed.setFooter({ text: `${LITURGY_FOOTER} · /liturgia leituras para os textos` });
+  embed.setFooter({ text: `${liturgyFooter(day)} · /liturgia leituras para os textos` });
   return embed;
 }
 
@@ -112,7 +139,7 @@ export function readingTextEmbeds(
       e.setTitle(truncate(`${reading.label} — ${formatLongDate(day.date)}`, DISCORD_LIMITS.embedTitle));
     if (i === shown.length - 1) {
       if (pages.length > maxEmbeds) e.setDescription(`${page}\n\n*(texto truncado por limite do Discord)*`);
-      e.setFooter({ text: LITURGY_FOOTER });
+      e.setFooter({ text: liturgyFooter(day) });
     }
     return e;
   });
@@ -124,7 +151,7 @@ export function prayersEmbed(day: LiturgicalDay, c: LiturgicalCelebration): Embe
   const e = new EmbedBuilder()
     .setColor(colorFor(c.color))
     .setTitle(truncate(`Orações — ${c.name}`, DISCORD_LIMITS.embedTitle))
-    .setDescription(`📅 ${formatLongDate(day.date)}`)
+    .setDescription([`📅 ${formatLongDate(day.date)}`, equivalenceNote(day)].filter(Boolean).join('\n\n'))
     .addFields(
       ...field('Antífona de entrada', c.antiphons.entrance),
       ...field('Oração do dia (Coleta)', c.prayers.collect),
@@ -132,7 +159,7 @@ export function prayersEmbed(day: LiturgicalDay, c: LiturgicalCelebration): Embe
       ...field('Antífona da comunhão', c.antiphons.communion),
       ...field('Depois da comunhão', c.prayers.communion),
     )
-    .setFooter({ text: LITURGY_FOOTER });
+    .setFooter({ text: liturgyFooter(day) });
   if (c.prayers.extras.length > 0)
     e.addFields({
       name: 'Orações adicionais',
